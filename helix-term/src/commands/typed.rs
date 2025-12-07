@@ -140,10 +140,6 @@ fn open(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
         return Ok(());
     }
 
-    open_impl(cx, args, Action::Replace)
-}
-
-fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow::Result<()> {
     for arg in args {
         let (path, pos) = crate::args::parse_file(&arg);
         let path = helix_stdx::path::expand_tilde(path);
@@ -153,8 +149,7 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
             let callback = async move {
                 let call: job::Callback = job::Callback::EditorCompositor(Box::new(
                     move |editor: &mut Editor, compositor: &mut Compositor| {
-                        let picker =
-                            ui::file_picker(editor, path.into_owned()).with_default_action(action);
+                        let picker = ui::file_picker(editor, path.into_owned());
                         compositor.push(Box::new(overlaid(picker)));
                     },
                 ));
@@ -163,7 +158,7 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
             cx.jobs.callback(callback);
         } else {
             // Otherwise, just open the file
-            let _ = cx.editor.open(&path, action)?;
+            let _ = cx.editor.open(&path, Action::Replace)?;
             let (view, doc) = current!(cx.editor);
             let pos = Selection::point(pos_at_coords(doc.text().slice(..), pos, true));
             doc.set_selection(view.id, pos);
@@ -173,6 +168,7 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
     }
     Ok(())
 }
+
 
 fn buffer_close_by_ids_impl(
     cx: &mut compositor::Context,
@@ -1898,6 +1894,7 @@ fn tree_sitter_layers(
     Ok(())
 }
 
+
 fn vsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -1906,11 +1903,15 @@ fn vsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
     if args.is_empty() {
         split(cx.editor, Action::VerticalSplit);
     } else {
-        open_impl(cx, args, Action::VerticalSplit)?;
+        for arg in args {
+            cx.editor
+                .open(&PathBuf::from(arg.as_ref()), Action::VerticalSplit)?;
+        }
     }
 
     Ok(())
 }
+
 
 fn hsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -1920,11 +1921,15 @@ fn hsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
     if args.is_empty() {
         split(cx.editor, Action::HorizontalSplit);
     } else {
-        open_impl(cx, args, Action::HorizontalSplit)?;
+        for arg in args {
+            cx.editor
+                .open(&PathBuf::from(arg.as_ref()), Action::HorizontalSplit)?;
+        }
     }
 
     Ok(())
 }
+
 
 fn vsplit_new(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {

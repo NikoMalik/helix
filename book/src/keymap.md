@@ -290,6 +290,8 @@ This layer is a kludge of mappings, mostly pickers.
 | -----   | -----------                                                             | -------                                    |
 | `f`     | Open file picker at LSP workspace root                                  | `file_picker`                              |
 | `F`     | Open file picker at current working directory                           | `file_picker_in_current_directory`         |
+| `e`     | Open file explorer at LSP workspace root                                | `file_explorer`                            |
+| `E`     | Open file explorer at the opened file's directory                       | `file_explorer_in_current_buffer_directory`|
 | `b`     | Open buffer picker                                                      | `buffer_picker`                            |
 | `j`     | Open jumplist picker                                                    | `jumplist_picker`                          |
 | `g`     | Open changed file picker                                                | `changed_file_picker`                      |
@@ -496,3 +498,18 @@ Keys to use within prompt, Remapping currently not supported.
 | `Tab`                                       | Select next completion item                                             |
 | `BackTab`                                   | Select previous completion item                                         |
 | `Enter`                                     | Open selected                                                           |
+
+
+
+
+### File Explorer
+
+There are additional keys accessible when using the File Explorer (`Space-e` and `Space-E`).
+
+| Key                          | Description                                                |
+| -----                        | -------------                                              |
+| `C-m`                      | Move selected file or directory                            |
+| `C-a`                      | Create a new file or directory                             |
+| `C-d`                      | Delete the selected file or directory                      |
+| `C-c`                      | Copy the selected file                                     |
+| `C-y`                      | Yank the path to the selected file or directory            |
