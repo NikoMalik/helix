@@ -21,7 +21,7 @@ use crate::job::{self, Callback};
 pub use completion::Completion;
 pub use editor::EditorView;
 pub use file_explorer::file_explorer;
-use helix_stdx::{rope,path};
+use helix_stdx::{path, rope};
 use helix_view::icons::ICONS;
 use helix_view::theme::Style;
 pub use markdown::Markdown;
@@ -62,7 +62,6 @@ pub fn prompt(
     prompt.recalculate_completion(cx.editor);
     cx.push_layer(Box::new(prompt));
 }
-
 
 pub fn prompt_with_input(
     cx: &mut crate::commands::Context,
@@ -286,7 +285,8 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
         }
     })
     .always_show_headers()
-    .with_preview(|_editor, path| Some((path.as_path().into(), None)));
+    .with_preview(|_editor, path| Some((path.as_path().into(), None)))
+    .with_title("Files".into());
     let injector = picker.injector();
     let timeout = std::time::Instant::now() + std::time::Duration::from_millis(30);
 

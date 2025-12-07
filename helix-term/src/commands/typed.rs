@@ -170,7 +170,6 @@ fn open(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     Ok(())
 }
 
-
 fn buffer_close_by_ids_impl(
     cx: &mut compositor::Context,
     doc_ids: &[DocumentId],
@@ -1431,12 +1430,12 @@ fn reload(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyh
     }
 
     let scrolloff = cx.editor.config().scrolloff;
-     let auto_fetch = cx.editor.config().inline_blame.auto_fetch;
+    let auto_fetch = cx.editor.config().inline_blame.auto_fetch;
     let (view, doc) = current!(cx.editor);
     doc.reload(view, &cx.editor.diff_providers).map(|_| {
         view.ensure_cursor_in_view(doc, scrolloff);
     })?;
-     let doc_id = doc.id();
+    let doc_id = doc.id();
     if let Some(path) = doc.path() {
         cx.editor
             .language_servers
@@ -1457,7 +1456,6 @@ fn reload(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyh
         }
     }
     doc.is_blame_potentially_out_of_date = true;
-
 
     Ok(())
 }
@@ -1485,7 +1483,7 @@ fn reload_all(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
         })
         .collect();
 
-     let blame_compute = cx.editor.config().inline_blame.auto_fetch;
+    let blame_compute = cx.editor.config().inline_blame.auto_fetch;
 
     for (doc_id, view_ids) in docs_view_ids {
         let doc = doc_mut!(cx.editor, &doc_id);
@@ -1514,7 +1512,7 @@ fn reload_all(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
                 view.ensure_cursor_in_view(doc, scrolloff);
             }
         }
-         if doc.should_request_full_file_blame(blame_compute) {
+        if doc.should_request_full_file_blame(blame_compute) {
             if let Some(path) = doc.path() {
                 helix_event::send_blocking(
                     &cx.editor.handlers.blame,
@@ -1603,7 +1601,8 @@ fn lsp_workspace_command(
                         move |cx, (ls_id, command), _action| {
                             cx.editor.execute_lsp_command(command.clone(), *ls_id);
                         },
-                    );
+                    )
+                    .with_title("LSP Commands".into());
                     compositor.push(Box::new(overlaid(picker)))
                 },
             ));
@@ -1928,7 +1927,6 @@ fn tree_sitter_layers(
     Ok(())
 }
 
-
 fn vsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -1946,7 +1944,6 @@ fn vsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
     Ok(())
 }
 
-
 fn hsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -1963,7 +1960,6 @@ fn hsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
 
     Ok(())
 }
-
 
 fn vsplit_new(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {

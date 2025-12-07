@@ -15,7 +15,7 @@ use helix_view::document::LineBlameError;
 pub use lsp::*;
 pub use syntax::*;
 use tui::{
-    text::{Span, Spans,ToSpan},
+    text::{Span, Spans, ToSpan},
     widgets::Cell,
 };
 pub use typed::*;
@@ -49,7 +49,7 @@ use helix_view::{
     document::{FormatterError, Mode, SCRATCH_BUFFER_NAME},
     editor::Action,
     expansion,
-     icons::{Icons, ICONS},
+    icons::{Icons, ICONS},
     info::Info,
     input::KeyEvent,
     keyboard::KeyCode,
@@ -1157,7 +1157,7 @@ fn move_selection(cx: &mut Context, direction: MoveSelection) {
     let mut last_step_changes: Vec<ExtendedChange> = vec![];
     let mut at_doc_edge = false;
     let all_changes = selection.into_iter().map(|range| {
-     let (start, end) = range.line_range(slice);
+        let (start, end) = range.line_range(slice);
         let line_start = text.line_to_char(start);
         let line_end = line_end_char_index(&slice, end);
         let line_text = text.slice(line_start..line_end).to_string();
@@ -1340,7 +1340,6 @@ fn move_lines_up(cx: &mut Context) {
 fn move_lines_down(cx: &mut Context) {
     move_selection(cx, MoveSelection::Below)
 }
-
 
 fn goto_window(cx: &mut Context, align: Align) {
     let count = cx.count() - 1;
@@ -2732,7 +2731,6 @@ fn global_search(cx: &mut Context) {
             ]);
 
             Cell::from(Spans::from(spans))
-            
         }),
         PickerColumn::hidden("contents"),
     ];
@@ -2902,7 +2900,8 @@ fn global_search(cx: &mut Context) {
         Some((path.as_path().into(), Some((*line_num, *line_num))))
     })
     .with_history_register(Some(reg))
-    .with_dynamic_query(get_files, Some(275));
+    .with_dynamic_query(get_files, Some(275))
+    .with_title("Search".into());
 
     cx.push_layer(Box::new(overlaid(picker)));
 }
@@ -3339,7 +3338,7 @@ fn file_explorer(cx: &mut Context) {
         return;
     }
 
-    if let Ok(picker) = ui::file_explorer(None,root, cx.editor) {
+    if let Ok(picker) = ui::file_explorer(None, root, cx.editor) {
         cx.push_layer(Box::new(overlaid(picker)));
     }
 }
@@ -3366,7 +3365,7 @@ fn file_explorer_in_current_buffer_directory(cx: &mut Context) {
         }
     };
 
-    if let Ok(picker) = ui::file_explorer(None,path, cx.editor) {
+    if let Ok(picker) = ui::file_explorer(None, path, cx.editor) {
         cx.push_layer(Box::new(overlaid(picker)));
     }
 }
@@ -3379,7 +3378,7 @@ fn file_explorer_in_current_directory(cx: &mut Context) {
         return;
     }
 
-    if let Ok(picker) = ui::file_explorer(None,cwd, cx.editor) {
+    if let Ok(picker) = ui::file_explorer(None, cwd, cx.editor) {
         cx.push_layer(Box::new(overlaid(picker)));
     }
 }
@@ -3431,25 +3430,22 @@ fn buffer_picker(cx: &mut Context) {
                 .as_deref()
                 .map(helix_stdx::path::get_relative_path);
 
-             let name = path
+            let name = path
                 .as_deref()
                 .and_then(Path::to_str)
                 .unwrap_or(SCRATCH_BUFFER_NAME);
 
-             let icons: DynGuard<Icons> = ICONS.load();
+            let icons: DynGuard<Icons> = ICONS.load();
 
-             
             let mut spans = Vec::with_capacity(2);
 
-            
             if let Some(icon) = icons.fs().from_optional_path(path.as_deref()) {
                 spans.push(icon.to_span_with(|icon| format!("{icon} ")));
             }
 
-              spans.push(Span::raw(name.to_string()));
+            spans.push(Span::raw(name.to_string()));
 
-               Cell::from(Spans::from(spans))
-
+            Cell::from(Spans::from(spans))
         }),
     ];
 
@@ -3477,7 +3473,8 @@ fn buffer_picker(cx: &mut Context) {
             (cursor_line, cursor_line)
         });
         Some((meta.id.into(), lines))
-    });
+    })
+    .with_title("Buffers".into());
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -3524,15 +3521,14 @@ fn jumplist_picker(cx: &mut Context) {
                 .as_deref()
                 .map(helix_stdx::path::get_relative_path);
 
-             let name = path
+            let name = path
                 .as_deref()
                 .and_then(Path::to_str)
                 .unwrap_or(SCRATCH_BUFFER_NAME);
 
-              let icons: DynGuard<Icons> = ICONS.load();
+            let icons: DynGuard<Icons> = ICONS.load();
 
-
-              let mut spans = Vec::with_capacity(2);
+            let mut spans = Vec::with_capacity(2);
 
             if let Some(icon) = icons.fs().from_optional_path(path.as_deref()) {
                 spans.push(icon.to_span_with(|icon| format!("{icon} ")));
@@ -3581,7 +3577,8 @@ fn jumplist_picker(cx: &mut Context) {
         let doc = &editor.documents.get(&meta.id)?;
         let line = meta.selection.primary().cursor_line(doc.text().slice(..));
         Some((meta.id.into(), Some((line, line))))
-    });
+    })
+    .with_title("Jump List".into());
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
@@ -3611,7 +3608,7 @@ fn changed_file_picker(cx: &mut Context) {
     let columns = [
         PickerColumn::new("change", |change: &FileChange, data: &FileChangeData| {
             let icons: DynGuard<Icons> = ICONS.load();
-                match change {
+            match change {
                 FileChange::Untracked { .. } => Span::styled(
                     match icons.vcs().added() {
                         Some(icon) => Cow::from(format!("{icon} untracked")),
@@ -3694,7 +3691,8 @@ fn changed_file_picker(cx: &mut Context) {
             }
         },
     )
-    .with_preview(|_editor, meta| Some((meta.path().into(), None)));
+    .with_preview(|_editor, meta| Some((meta.path().into(), None)))
+    .with_title("Changed Files".into());
     let injector = picker.injector();
 
     cx.editor
@@ -3786,7 +3784,8 @@ pub fn command_palette(cx: &mut Context) {
                         doc.append_changes_to_history(view);
                     }
                 }
-            });
+            })
+            .with_title("Command Palette".into());
             compositor.push(Box::new(overlaid(picker)));
         },
     ));
@@ -3814,8 +3813,6 @@ enum IndentFallbackPos {
 fn insert_at_line_start(cx: &mut Context) {
     insert_with_indent(cx, IndentFallbackPos::LineStart);
 }
-
-
 
 pub(crate) fn blame_line_impl(editor: &mut Editor, doc_id: DocumentId, cursor_line: u32) {
     let inline_blame_config = &editor.config().inline_blame;

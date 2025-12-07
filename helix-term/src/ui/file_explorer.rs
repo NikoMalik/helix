@@ -1,19 +1,18 @@
+use helix_core::hashmap;
+use helix_view::icons::ICONS;
+use helix_view::{theme::Style, Editor};
+use std::borrow::Cow;
 use std::error::Error as _;
 use std::{
     fs,
     path::{Path, PathBuf},
 };
-use helix_view::icons::ICONS;
-use helix_core::hashmap;
-use tui::widgets::Cell;
 use tui::text::{Span, Spans, ToSpan};
-use helix_view::{theme::Style, Editor};
-use std::borrow::Cow;
+use tui::widgets::Cell;
 
-use helix_stdx::{path};
+use helix_stdx::path;
 
-
-use crate::{ctrl, compositor::Context, job::Callback};
+use crate::{compositor::Context, ctrl, job::Callback};
 
 use super::prompt::Movement;
 use super::{
@@ -374,7 +373,7 @@ pub fn file_explorer(
     });
 
     let columns = [PickerColumn::new(
-         path::get_relative_dir(&root),
+        path::get_relative_dir(&root),
         |(path, is_dir): &ExplorerItem, (root, directory_style): &ExplorerData| {
             let icons = ICONS.load();
             let name = path.file_name();
@@ -386,7 +385,7 @@ pub fn file_explorer(
             // Path `..` does not have a name, and so will become `..` as a string.
             let name = name.map_or_else(|| Cow::Borrowed(".."), |dir| dir.to_string_lossy());
             if *is_dir {
-                   match icons.fs().directory(is_open) {
+                match icons.fs().directory(is_open) {
                     Some(icon) => Span::styled(format!("{icon} {name}/"), *directory_style).into(),
                     None => Span::styled(format!("{name}/"), *directory_style).into(),
                 }
@@ -397,7 +396,7 @@ pub fn file_explorer(
 
                 Cell::from(Spans::from(spans))
             } else {
-                 name.into()
+                name.into()
             }
         },
     )];
@@ -421,7 +420,7 @@ pub fn file_explorer(
                 });
                 cx.jobs.callback(callback);
             } else if let Err(e) = cx.editor.open(path, action) {
-                    let err = match e.source() {
+                let err = match e.source() {
                     Some(err) => format!("{}", err),
                     None => format!("unable to open \"{}\"", path.display()),
                 };
@@ -432,6 +431,7 @@ pub fn file_explorer(
     .with_cursor(cursor.unwrap_or_default())
     .always_show_headers()
     .with_preview(|_editor, (path, _is_dir)| Some((path.as_path().into(), None)))
+    .with_title("File Explorer".into())
     .with_key_handlers(hashmap! {
         ctrl!('a') => create,
         ctrl!('m') => move_,
