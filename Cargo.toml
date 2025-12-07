@@ -22,7 +22,7 @@ default-members = [
 ]
 
 [profile.release]
-lto = "thin"
+lto = "fat"
 
 [profile.opt]
 inherits = "release"

@@ -22,6 +22,7 @@ pub use completion::Completion;
 pub use editor::EditorView;
 pub use file_explorer::file_explorer;
 use helix_stdx::rope;
+use helix_view::icons::ICONS;
 use helix_view::theme::Style;
 pub use markdown::Markdown;
 pub use menu::Menu;
@@ -32,7 +33,8 @@ pub use spinner::{ProgressSpinners, Spinner};
 pub use text::Text;
 
 use helix_view::Editor;
-use tui::text::{Span, Spans};
+use tui::text::{Span, Spans, ToSpan};
+
 
 use std::path::Path;
 use std::{error::Error, path::PathBuf};
@@ -251,7 +253,13 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
         "path",
         |item: &PathBuf, data: &FilePickerData| {
             let path = item.strip_prefix(&data.root).unwrap_or(item);
-            let mut spans = Vec::with_capacity(3);
+            let mut spans = Vec::with_capacity(4);
+            let icons = ICONS.load();
+
+            if let Some(icon) = icons.fs().from_path(path) {
+                spans.push(icon.to_span_with(|icon| format!("{icon} ")));
+            }
+
             if let Some(dirs) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
                 spans.extend([
                     Span::styled(dirs.to_string_lossy(), data.directory_style),
