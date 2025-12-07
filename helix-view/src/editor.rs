@@ -329,6 +329,8 @@ where
 pub struct Config {
     /// Padding to keep between the edge of the screen and the cursor when scrolling. Defaults to 5.
     pub scrolloff: usize,
+    /// Whether to enable the welcome screen
+    pub welcome_screen: bool,
     /// Number of lines to scroll at once. Defaults to 3
     pub scroll_lines: isize,
     /// Mouse support. Defaults to true.
@@ -1162,6 +1164,7 @@ impl Default for Config {
             rainbow_brackets: false,
             kitty_keyboard_protocol: Default::default(),
             buffer_picker: BufferPickerConfig::default(),
+            welcome_screen: true,
         }
     }
 }
@@ -1884,6 +1887,14 @@ impl Editor {
         self.save_queue.push(stream);
 
         id
+    }
+
+    /// Use when Helix is opened with no arguments passed
+    pub fn new_file_welcome(&mut self) -> DocumentId {
+        self.new_file_from_document(
+            Action::VerticalSplit,
+            Document::default(self.config.clone(), self.syn_loader.clone()).with_welcome(),
+        )
     }
 
     fn new_file_from_document(&mut self, action: Action, doc: Document) -> DocumentId {
