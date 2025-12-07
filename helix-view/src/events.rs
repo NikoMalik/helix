@@ -7,7 +7,8 @@ use crate::{editor::Config, Document, DocumentId, Editor, ViewId};
 events! {
     DocumentDidOpen<'a> {
         editor: &'a mut Editor,
-        doc: DocumentId
+        doc: DocumentId,
+        path: &'a std::path::PathBuf
     }
     DocumentDidChange<'a> {
         doc: &'a mut Document,
@@ -22,7 +23,6 @@ events! {
     }
     SelectionDidChange<'a> { doc: &'a mut Document, view: ViewId }
     DiagnosticsDidChange<'a> { editor: &'a mut Editor, doc: DocumentId }
-    // called **after** a document loses focus (but not when its closed)
     DocumentFocusLost<'a> { editor: &'a mut Editor, doc: DocumentId }
 
     LanguageServerInitialized<'a> {
@@ -34,8 +34,11 @@ events! {
         server_id: LanguageServerId
     }
 
-    // NOTE: this event is simple for now and is expected to change as the config system evolves.
-    // Ideally it would say what changed.
+    EditorConfigDidChange<'a> {
+        old_config: &'a Config,
+        editor: &'a mut Editor
+    }
+
     ConfigDidChange<'a> {
         editor: &'a mut Editor,
         old: &'a Config,

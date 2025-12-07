@@ -194,6 +194,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam-channel"
+version = "0.5.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2"
+dependencies = [
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "crossbeam-deque"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -517,6 +526,7 @@ checksum = "60beff35667fb0ac935c4c45941868d9cf5025e4b85c58deb3c5a65113e22ce4"
 dependencies = [
  "gix-actor",
  "gix-attributes",
+ "gix-blame",
  "gix-command",
  "gix-commitgraph",
  "gix-config",
@@ -595,6 +605,25 @@ version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e150161b8a75b5860521cb876b506879a3376d3adc857ec7a9d35e7c6a5e531"
 dependencies = [
+ "thiserror",
+]
+
+[[package]]
+name = "gix-blame"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d7c62ee6ebdfe8a21d23609d7e73e45f13a0ec9308aec7d7303640d7bf80fbc"
+dependencies = [
+ "gix-commitgraph",
+ "gix-date",
+ "gix-diff",
+ "gix-hash",
+ "gix-object",
+ "gix-revwalk",
+ "gix-trace",
+ "gix-traverse",
+ "gix-worktree",
+ "smallvec",
  "thiserror",
 ]
 
@@ -746,12 +775,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfa64593d1586135102307fb57fb3a9d3868b6b1f45a4da1352cce5070f8916a"
 dependencies = [
  "crc32fast",
+ "crossbeam-channel",
  "gix-path",
  "gix-trace",
  "gix-utils",
  "libc",
  "libz-rs-sys",
  "once_cell",
+ "parking_lot",
  "prodash",
  "thiserror",
  "walkdir",
@@ -1567,6 +1598,7 @@ dependencies = [
  "gix",
  "helix-core",
  "helix-event",
+ "helix-stdx",
  "imara-diff 0.2.0",
  "log",
  "parking_lot",

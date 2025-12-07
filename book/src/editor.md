@@ -10,6 +10,7 @@
 - [`[editor.auto-pairs]` Section](#editorauto-pairs-section)
 - [`[editor.auto-save]` Section](#editorauto-save-section)
 - [`[editor.search]` Section](#editorsearch-section)
+- [`[editor.inline-blame]` Section](#editorinlineblame-section)
 - [`[editor.whitespace]` Section](#editorwhitespace-section)
 - [`[editor.indent-guides]` Section](#editorindent-guides-section)
 - [`[editor.gutters]` Section](#editorgutters-section)
@@ -525,3 +526,41 @@ enable = true
 # Set the trigger length lower so that words are completed more often
 trigger-length = 4
 ```
+
+
+
+
+### `[editor.inline-blame]` Section
+
+Inline blame is virtual text that appears at the end of a line, displaying information about the most recent commit that affected this line.
+
+| Key     | Description                                | Default |
+| ------- | ------------------------------------------ | ------- |
+| `show` | When to show inline blame | `"never"` |
+| `auto-fetch` | Automatically fetch blame information in the background | `false` |
+| `format` | Inline blame message format | `"{author}, {time-ago} • {title} • {commit}"` |
+
+`show` can be one of the following:
+- `"all-lines"`: Inline blame is on every line.
+- `"cursor-line"`: Inline blame is only on the line of the primary cursor.
+- `"hidden"`: Inline blame is hidden.
+
+With `auto-fetch` set to `false`, blame for the current file is fetched only when explicitly requested, such as when using `space + B` to display the blame for the line of the cursor. There may be a little delay when loading the blame.
+
+When `auto-fetch` is set to `true`, blame for the file is fetched in the background; this will have no effect on performance, but will use a little bit extra resources in the background. Directly requesting the blame with `space + B` will be instant. Inline blame will show as soon as the blame is available when loading new files.
+
+When opening new files, even with `show` set to `"all-lines"` or `"cursor-line"`, the inline blame won't show. It needs to be fetched first in order to become available, which can be triggered manually with `space + B`.
+
+#### `format`
+
+Change the `format` string to customize the blame message displayed. Variables are text placeholders wrapped in curly braces: `{variable}`. The following variables are available:
+
+- `author`: The author of the commit
+- `date`: When the commit was made
+- `time-ago`: How long ago the commit was made
+- `title`: The title of the commit
+- `body`: The body of the commit
+- `commit`: The short hex SHA1 hash of the commit
+- `email`: The email of the author of the commit
+
+
