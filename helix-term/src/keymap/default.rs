@@ -73,10 +73,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "d" => delete_selection,
         "A-d" => delete_selection_noyank,
         "c" => change_selection,
-        "A-c" => change_selection_noyank,
+        "C-c" => change_selection_noyank,
 
         "C" => copy_selection_on_next_line,
-        "A-C" => copy_selection_on_prev_line,
+        "C-C" => copy_selection_on_prev_line,
 
 
         "s" => select_regex,
@@ -88,10 +88,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-;" => flip_selections,
         "A-o" | "A-up" => expand_selection,
         "A-i" | "A-down" => shrink_selection,
-        "A-I" | "A-S-down" => select_all_children,
+        "C-I" | "A-S-down" => select_all_children,
         "A-p" | "A-left" => select_prev_sibling,
         "A-n" | "A-right" => select_next_sibling,
-        "A-e" => move_parent_node_end,
+        "C-e" => move_parent_node_end,
         "A-b" => move_parent_node_start,
         "A-a" => select_all_siblings,
 
@@ -179,8 +179,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
         "(" => rotate_selections_backward,
         ")" => rotate_selections_forward,
-        "A-(" => rotate_selection_contents_backward,
-        "A-)" => rotate_selection_contents_forward,
+        "C-(" => rotate_selection_contents_backward,
+        "C-)" => rotate_selection_contents_forward,
 
         "A-:" => ensure_selections_forward,
 
@@ -189,6 +189,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-f" | "pagedown" => page_down,
         "C-u" => page_cursor_half_up,
         "C-d" => page_cursor_half_down,
+        "C-k" => move_lines_up,
+        "C-j" => move_lines_down,
 
         "C-w" => { "Window"
             "C-w" | "w" => rotate_view,
@@ -213,8 +215,6 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             },
         },
 
-        // move under <space>c
-        "C-c" => toggle_comments,
 
         // z family for save/restore/combine from/to sels from register
 
