@@ -784,6 +784,8 @@ pub enum BufferLine {
     Multiple,
 }
 
+
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum LineNumber {
