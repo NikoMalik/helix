@@ -300,6 +300,23 @@ pub fn expand<T: AsRef<Path> + ?Sized>(path: &T) -> Cow<'_, Path> {
     }
 }
 
+/// Get the relative directory as a string.
+///
+/// NOTE: Assumes the given path is a directory, and will always output with a
+/// trailing slash.
+pub fn get_relative_dir(path: &Path) -> Cow<'static, str> {
+    let path = get_relative_path(path);
+    if path.components().next().is_none() {
+        "./".into()
+    } else {
+        let mut str = path.to_string_lossy().into_owned();
+        if !str.ends_with('/') {
+            str.push('/');
+        }
+        str.into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{

@@ -21,7 +21,7 @@ use crate::job::{self, Callback};
 pub use completion::Completion;
 pub use editor::EditorView;
 pub use file_explorer::file_explorer;
-use helix_stdx::rope;
+use helix_stdx::{rope,path};
 use helix_view::icons::ICONS;
 use helix_view::theme::Style;
 pub use markdown::Markdown;
@@ -35,7 +35,7 @@ pub use text::Text;
 use helix_view::Editor;
 use tui::text::{Span, Spans, ToSpan};
 
-
+use std::borrow::Cow;
 use std::path::Path;
 use std::{error::Error, path::PathBuf};
 
@@ -62,6 +62,7 @@ pub fn prompt(
     prompt.recalculate_completion(cx.editor);
     cx.push_layer(Box::new(prompt));
 }
+
 
 pub fn prompt_with_input(
     cx: &mut crate::commands::Context,
@@ -250,7 +251,7 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
     log::debug!("file_picker init {:?}", Instant::now().duration_since(now));
 
     let columns = [PickerColumn::new(
-        "path",
+        path::get_relative_dir(&root),
         |item: &PathBuf, data: &FilePickerData| {
             let path = item.strip_prefix(&data.root).unwrap_or(item);
             let mut spans = Vec::with_capacity(4);
@@ -284,6 +285,7 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
             cx.editor.set_error(err);
         }
     })
+    .always_show_headers()
     .with_preview(|_editor, path| Some((path.as_path().into(), None)));
     let injector = picker.injector();
     let timeout = std::time::Instant::now() + std::time::Duration::from_millis(30);

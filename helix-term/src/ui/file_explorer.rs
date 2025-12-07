@@ -10,6 +10,9 @@ use tui::text::{Span, Spans, ToSpan};
 use helix_view::{theme::Style, Editor};
 use std::borrow::Cow;
 
+use helix_stdx::{path};
+
+
 use crate::{ctrl, compositor::Context, job::Callback};
 
 use super::prompt::Movement;
@@ -371,7 +374,7 @@ pub fn file_explorer(
     });
 
     let columns = [PickerColumn::new(
-        "path",
+         path::get_relative_dir(&root),
         |(path, is_dir): &ExplorerItem, (root, directory_style): &ExplorerData| {
             let icons = ICONS.load();
             let name = path.file_name();
@@ -427,6 +430,7 @@ pub fn file_explorer(
         },
     )
     .with_cursor(cursor.unwrap_or_default())
+    .always_show_headers()
     .with_preview(|_editor, (path, _is_dir)| Some((path.as_path().into(), None)))
     .with_key_handlers(hashmap! {
         ctrl!('a') => create,
