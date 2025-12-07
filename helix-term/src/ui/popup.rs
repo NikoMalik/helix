@@ -5,7 +5,7 @@ use crate::{
 };
 use tui::{
     buffer::Buffer as Surface,
-    widgets::{Block, Widget},
+    widgets::{Block, BorderType, Widget},
 };
 
 use helix_core::Position;
@@ -320,11 +320,12 @@ impl<T: Component> Component for Popup<T> {
             cx.editor.theme.get("ui.popup")
         };
         surface.clear_with(area, background);
+        let border_type = BorderType::new(cx.editor.config().rounded_corners);
 
         let mut inner = area;
         if render_borders {
             inner = area.inner(Margin::all(1));
-            Widget::render(Block::bordered(), area, surface);
+            Widget::render(Block::bordered().border_type(border_type), area, surface);
         }
         let border = usize::from(render_borders);
 
