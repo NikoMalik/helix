@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use anyhow::Result;
 use std::borrow::Cow;
 
-use helix_view::theme::Modifier;
+use helix_view::theme::{Modifier, Style};
 use helix_view::icons::ICONS;
 use tui::text::{Span,Spans, ToSpan};
 
@@ -867,64 +867,94 @@ fn render_tree<T: TreeViewItem>(
         )
         .collect()
 }
-impl<T: TreeViewItem + Clone> TreeView<T> {
-    pub fn render(
-        &mut self,
-        area: Rect,
-        prompt_area: Rect,
-        surface: &mut Surface,
-        cx: &mut Context,
-    ) {
-        let style = cx.editor.theme.get(&self.tree_symbol_style);
-        if let Some((_, prompt)) = self.search_prompt.as_mut() {
-            prompt.render_prompt(prompt_area, surface, cx)
-        }
 
-        let ancestor_style = {
-            let style = cx.editor.theme.get("ui.selection");
-            let fg = cx.editor.theme.get("ui.text").fg;
-            match (style.fg, fg) {
-                (None, Some(fg)) => style.fg(fg),
-                _ => style,
+impl<T: TreeViewItem + Clone> TreeView<T> {
+pub fn render(
+    &mut self,
+    area: Rect,
+    prompt_area: Rect,
+    surface: &mut Surface,
+    cx: &mut Context,
+) {
+    use tui::text::Span;
+
+    let text_style = cx.editor.theme.get(&self.tree_symbol_style);
+    let selected_style = text_style.add_modifier(Modifier::REVERSED);
+    let ancestor_style = cx
+        .editor
+        .theme
+        .get("ui.selection")
+        .patch(cx.editor.theme.get("ui.text"));
+
+    let background = cx.editor.theme.get("ui.background");
+    surface.clear_with(area, background);
+
+
+    let icons = ICONS.load(); 
+
+    for (i, line) in self.render_lines(area).into_iter().enumerate() {
+        let y = area.y + i as u16;
+        if y >= area.bottom() { break; }
+
+        surface.set_stringn(area.x, y, &line.indent, area.width as usize, text_style);
+
+        let x = area.x + line.indent.chars().count() as u16;
+        let content = &line.content;
+
+        let spans = if line.selected {
+            vec![Span::styled(content, selected_style)]
+        } else if line.is_ancestor_of_current_item {
+            vec![Span::styled(content, ancestor_style)]
+        } else {
+            if let Some(space_pos) = content.find(' ') {
+                let icon_str = &content[..space_pos];
+                let name_str = &content[space_pos + 1..];
+
+                let icon = icons.fs().from_name(icon_str).or_else(|| {
+                    std::path::Path::new(name_str)
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .and_then(|ext| icons.fs().from_name(ext))
+                });
+
+                if let Some(icon) = icon {
+                    let icon_style = icon
+                        .color()
+                        .map(|c| Style::default().fg(helix_view::theme::Color::from(c)))
+                        .unwrap_or(text_style);
+
+                    let icon_span = Span::styled(format!("{} ", icon.glyph()), icon_style);
+                    let name_span = Span::styled(name_str.to_owned(), text_style);
+
+                    vec![icon_span, name_span]
+                } else {
+                    vec![Span::styled(content, text_style)]
+                }
+            } else {
+                vec![Span::styled(content, text_style)]
             }
         };
 
-        let iter = self.render_lines(area).into_iter().enumerate();
+        let mut current_x = x;
+        for span in spans {
+            if current_x >= area.right() { break; }
+            let width = span.width();
+            let available = area.right().saturating_sub(current_x) as usize;
+            let to_draw = width.min(available);
 
-        for (index, line) in iter {
-            let area = Rect::new(area.x, area.y.saturating_add(index as u16), area.width, 1);
-            let indent_len = line.indent.chars().count() as u16;
-            surface.set_stringn(
-                area.x,
-                area.y,
-                line.indent.clone(),
-                indent_len as usize,
-                style,
-            );
-
-            let style = if line.selected {
-                style.add_modifier(Modifier::REVERSED)
-            } else {
-                style
-            };
-            let x = area.x.saturating_add(indent_len);
-            surface.set_stringn(
-                x,
-                area.y,
-                line.content.clone(),
-                area.width
-                    .saturating_sub(indent_len)
-                    .saturating_sub(1)
-                    .into(),
-                if line.is_ancestor_of_current_item {
-                    ancestor_style
-                } else {
-                    style
-                },
-            );
+            if to_draw > 0 {
+                surface.set_stringn(
+                    current_x,
+                    y,
+                    &span.content,
+                    to_draw,
+                    span.style,
+                );
+                current_x += to_draw as u16;
+            }
         }
     }
-
+}
     #[cfg(test)]
     pub fn render_to_string(&mut self, area: Rect) -> String {
         let lines = self.render_lines(area);
