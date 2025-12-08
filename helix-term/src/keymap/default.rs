@@ -191,8 +191,6 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-d" => page_cursor_half_down,
         "C-k" => move_lines_up,
         "C-j" => move_lines_down,
-        "C-n" => close_tree_view,
-
         "C-w" => { "Window"
             "C-w" | "w" => rotate_view,
             "C-s" | "s" => hsplit,
@@ -237,6 +235,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "g" => changed_file_picker,
             "a" => code_action,
             "'" => last_picker,
+            "n" => close_tree_view,
             "G" => { "Debug (experimental)" sticky=true
                 "l" => dap_launch,
                 "r" => dap_restart,
