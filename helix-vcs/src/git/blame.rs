@@ -1,7 +1,7 @@
 use anyhow::Context as _;
 use anyhow::Result;
+use hashbrown::HashMap;
 use parking_lot::Mutex;
-use std::collections::HashMap;
 use std::path::PathBuf;
 
 use super::{get_repo_dir, open_repo};

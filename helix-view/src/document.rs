@@ -24,7 +24,7 @@ use serde::de::{self, Deserialize, Deserializer};
 use serde::Serialize;
 use std::borrow::Cow;
 use std::cell::Cell;
-use std::collections::HashMap;
+use hashbrown::HashMap;
 use std::fmt::Display;
 use std::future::Future;
 use std::io;

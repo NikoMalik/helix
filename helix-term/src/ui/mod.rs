@@ -330,6 +330,7 @@ fn inject_files(
 ) {
     use ignore::WalkState;
     use std::collections::HashSet;
+
     use std::time::{Duration, Instant};
 
     // How long we are willing to wait for results before displaying the file picker.

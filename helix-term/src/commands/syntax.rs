@@ -1,9 +1,10 @@
 use std::{
-    collections::HashSet,
     iter,
     path::{Path, PathBuf},
     sync::Arc,
 };
+
+use hashbrown::HashSet;
 
 use dashmap::DashMap;
 use futures_util::FutureExt;

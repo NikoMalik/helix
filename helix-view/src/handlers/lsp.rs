@@ -1,5 +1,5 @@
 use std::collections::btree_map::Entry;
-use std::collections::HashSet;
+use hashbrown::HashSet;
 use std::fmt::Display;
 
 use crate::editor::Action;

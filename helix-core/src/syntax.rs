@@ -2,13 +2,14 @@ pub mod config;
 
 use std::{
     borrow::Cow,
-    collections::HashMap,
     fmt, iter,
     ops::{self, RangeBounds},
     path::Path,
     sync::Arc,
     time::Duration,
 };
+
+use hashbrown::HashMap;
 
 use anyhow::{Context, Result};
 use arc_swap::{ArcSwap, Guard};

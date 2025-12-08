@@ -4,8 +4,8 @@ use globset::GlobSet;
 use helix_stdx::rope;
 use serde::{ser::SerializeSeq as _, Deserialize, Serialize};
 
+use hashbrown::{HashMap, HashSet};
 use std::{
-    collections::{HashMap, HashSet},
     fmt::{self, Display},
     num::NonZeroU8,
     path::PathBuf,

@@ -1,7 +1,8 @@
 use arc_swap::ArcSwap;
+use hashbrown::HashMap;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Display, path::Path};
+use std::{fmt::Display, path::Path};
 
 use smartstring::{LazyCompact, SmartString};
 

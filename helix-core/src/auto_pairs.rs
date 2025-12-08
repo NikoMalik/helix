@@ -2,7 +2,7 @@
 //! this module provides the functionality to insert the paired closing character.
 
 use crate::{graphemes, movement::Direction, Range, Rope, Selection, Tendril, Transaction};
-use std::collections::HashMap;
+use hashbrown::HashMap;
 
 use smallvec::SmallVec;
 

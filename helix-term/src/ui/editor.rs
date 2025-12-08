@@ -36,9 +36,9 @@ use helix_view::{
     keyboard::{KeyCode, KeyModifiers},
     Document, DocumentId, Editor, Theme, View,
 };
-use std::{
-    collections::HashMap, mem::take, num::NonZeroUsize, ops, path::PathBuf, rc::Rc, sync::LazyLock,
-};
+use std::{mem::take, num::NonZeroUsize, ops, path::PathBuf, rc::Rc, sync::LazyLock};
+
+use hashbrown::HashMap;
 
 use super::text_decorations::blame::InlineBlame;
 use tui::{

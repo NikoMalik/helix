@@ -3,7 +3,8 @@
 //! This provides an eventually consistent set of words used in any open buffers. This set is
 //! later used for lexical completion.
 
-use std::{borrow::Cow, collections::HashMap, iter, mem, sync::Arc, time::Duration};
+use std::{borrow::Cow, iter, mem, sync::Arc, time::Duration};
+use hashbrown::HashMap;
 
 use helix_core::{
     chars::char_is_word, fuzzy::fuzzy_match, movement, ChangeSet, Range, Rope, RopeSlice,
