@@ -39,7 +39,6 @@ pub use tree::{TreeOp, TreeView, TreeViewItem};
 use helix_view::Editor;
 use tui::text::{Span, Spans, ToSpan};
 
-use std::borrow::Cow;
 use std::path::Path;
 use std::{error::Error, path::PathBuf};
 

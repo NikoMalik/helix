@@ -1,7 +1,7 @@
 //! Layout engine for terminal
 
+use hashbrown::HashMap;
 use std::cell::RefCell;
-use std::collections::HashMap;
 
 use cassowary::strength::{REQUIRED, WEAK};
 use cassowary::WeightedRelation::*;

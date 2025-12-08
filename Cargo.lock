@@ -368,6 +368,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastdiv"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dff846c3bc86867340b078d8795cddacf45243bde6f2f45da05257ebe209cfa6"
+
+[[package]]
 name = "faster-hex"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1357,6 +1363,8 @@ dependencies = [
  "allocator-api2",
  "equivalent",
  "foldhash 0.2.0",
+ "serde",
+ "serde_core",
 ]
 
 [[package]]
@@ -1415,6 +1423,7 @@ dependencies = [
  "fern",
  "futures-executor",
  "futures-util",
+ "hashbrown 0.16.1",
  "helix-core",
  "helix-dap-types",
  "helix-stdx",
@@ -1432,6 +1441,7 @@ dependencies = [
 name = "helix-dap-types"
 version = "25.7.1"
 dependencies = [
+ "hashbrown 0.16.1",
  "serde",
  "serde_json",
 ]
@@ -1476,6 +1486,7 @@ dependencies = [
  "futures-executor",
  "futures-util",
  "globset",
+ "hashbrown 0.16.1",
  "helix-core",
  "helix-loader",
  "helix-lsp-types",
@@ -1496,6 +1507,7 @@ name = "helix-lsp-types"
 version = "0.95.1"
 dependencies = [
  "bitflags",
+ "hashbrown 0.16.1",
  "serde",
  "serde_json",
  "url",
@@ -1533,11 +1545,13 @@ dependencies = [
  "content_inspector",
  "crossterm",
  "dashmap",
+ "fastdiv",
  "fern",
  "futures-util",
  "grep-matcher",
  "grep-regex",
  "grep-searcher",
+ "hashbrown 0.16.1",
  "helix-core",
  "helix-dap",
  "helix-event",
@@ -1580,6 +1594,8 @@ dependencies = [
  "bitflags",
  "cassowary",
  "crossterm",
+ "fastdiv",
+ "hashbrown 0.16.1",
  "helix-core",
  "helix-view",
  "log",
@@ -1616,7 +1632,9 @@ dependencies = [
  "chardetng",
  "clipboard-win",
  "crossterm",
+ "fastdiv",
  "futures-util",
+ "hashbrown 0.16.1",
  "helix-core",
  "helix-dap",
  "helix-event",

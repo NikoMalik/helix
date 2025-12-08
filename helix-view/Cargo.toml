@@ -23,6 +23,9 @@ helix-loader = { path = "../helix-loader" }
 helix-lsp = { path = "../helix-lsp" }
 helix-dap = { path = "../helix-dap" }
 helix-vcs = { path = "../helix-vcs" }
+fastdiv = { version = "0.1.0"}
+hashbrown="0.16"
+
 
 bitflags.workspace = true
 anyhow = "1"

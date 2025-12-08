@@ -8,6 +8,8 @@ use crate::{
     Align, Document, DocumentId, Theme, ViewId,
 };
 
+use fastdiv::FastDiv;
+
 use helix_core::{
     char_idx_at_visual_offset,
     doc_formatter::TextFormat,
@@ -256,13 +258,16 @@ impl View {
         let text_fmt = doc.text_format(viewport.width, None);
         let annotations = self.text_annotations(doc, None);
 
+        const D: u64 = 2;
+        let m = D.precompute_div();
+
         let (scrolloff_top, scrolloff_bottom) = if CENTERING {
             (0, 0)
         } else {
             (
                 // - 1 from the top so we have at least one gap in the middle.
-                scrolloff.min(viewport.height.saturating_sub(1) as usize / 2),
-                scrolloff.min(viewport.height as usize / 2),
+                scrolloff.min((viewport.height.saturating_sub(1) as u64).fast_div(m) as usize),
+                scrolloff.min((viewport.height as u64).fast_div(m) as usize),
             )
         };
         let (scrolloff_left, scrolloff_right) = if CENTERING {
@@ -270,8 +275,8 @@ impl View {
         } else {
             (
                 // - 1 from the left so we have at least one gap in the middle.
-                scrolloff.min(viewport.width.saturating_sub(1) as usize / 2),
-                scrolloff.min(viewport.width as usize / 2),
+                scrolloff.min((viewport.width.saturating_sub(1) as u64).fast_div(m) as usize),
+                scrolloff.min((viewport.width as u64).fast_div(m) as usize),
             )
         };
 

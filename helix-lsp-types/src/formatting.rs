@@ -5,7 +5,7 @@ use crate::{
     TextDocumentPositionParams, WorkDoneProgressParams,
 };
 
-use std::collections::HashMap;
+use hashbrown::HashMap;
 
 pub type DocumentFormattingClientCapabilities = DynamicRegistrationClientCapabilities;
 pub type DocumentRangeFormattingClientCapabilities = DynamicRegistrationClientCapabilities;

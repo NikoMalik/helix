@@ -16,7 +16,9 @@ use helix_stdx::path;
 use parking_lot::Mutex;
 use serde::Deserialize;
 use serde_json::Value;
-use std::{collections::HashMap, path::PathBuf};
+use std::{ path::PathBuf};
+use hashbrown::HashMap;
+
 use std::{
     ffi::OsStr,
     sync::{

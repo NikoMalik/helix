@@ -11,13 +11,14 @@ use serde_json::Value;
 
 use anyhow::anyhow;
 use std::{
-    collections::HashMap,
     future::Future,
     net::{IpAddr, Ipv4Addr, SocketAddr},
     path::PathBuf,
     process::Stdio,
     sync::atomic::{AtomicU64, Ordering},
 };
+use hashbrown::HashMap;
+
 use tokio::{
     io::{AsyncBufRead, AsyncWrite, BufReader, BufWriter},
     net::TcpStream,

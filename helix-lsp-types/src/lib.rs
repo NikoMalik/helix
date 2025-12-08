@@ -19,7 +19,8 @@ able to parse any URI, such as `urn:isbn:0451450523`.
 
 use bitflags::bitflags;
 
-use std::{collections::HashMap, fmt::Debug};
+use hashbrown::HashMap;
+use std::fmt::Debug;
 
 use serde::{de, de::Error as Error_, Deserialize, Serialize};
 use serde_json::Value;

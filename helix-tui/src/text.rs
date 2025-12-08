@@ -52,7 +52,6 @@ use helix_view::graphics::Style;
 use helix_view::icons::Icon;
 use std::borrow::Cow;
 use unicode_segmentation::UnicodeSegmentation;
-
 /// A grapheme associated to a style.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StyledGrapheme<'a> {
@@ -241,6 +240,8 @@ impl Spans<'_> {
     /// ]);
     /// assert_eq!(7, spans.width());
     /// ```
+    ///
+    ///
     pub fn width(&self) -> usize {
         self.0.iter().map(Span::width).sum()
     }

@@ -28,6 +28,7 @@ futures-executor.workspace = true
 futures-util.workspace = true
 tokio-stream.workspace = true
 sonic-rs.workspace = true
+hashbrown="0.16"
 
 [dev-dependencies]
 fern = "0.7"

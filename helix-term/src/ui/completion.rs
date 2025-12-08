@@ -6,6 +6,8 @@ use crate::{
         trigger_auto_completion, CompletionItem, CompletionResponse, ResolveHandler,
     },
 };
+
+use fastdiv::FastDiv;
 use helix_core::snippets::{ActiveSnippet, RenderedSnippet, Snippet};
 use helix_core::{self as core, chars, fuzzy::MATCHER, Change, Transaction};
 use helix_lsp::{lsp, util, OffsetEncoding};
@@ -358,6 +360,10 @@ impl Completion {
             AtomKind::Fuzzy,
             false,
         );
+        const D: u32 = 2;
+        const DD: u32 = 3;
+        let m = D.precompute_div();
+        let mm = DD.precompute_div();
         let mut buf = Vec::new();
         let (matches, options) = self.popup.contents_mut().update_options();
         if incremental {
@@ -367,7 +373,7 @@ impl Completion {
                 let new_score = pattern.score(Utf32Str::new(text, &mut buf), &mut matcher);
                 match new_score {
                     Some(new_score) => {
-                        *score = new_score as u32 / 2;
+                        *score = (new_score as u32).fast_div(m);
                         true
                     }
                     None => false,
@@ -391,7 +397,7 @@ impl Completion {
         //
         // The score computation is a heuristic derived from Nucleo internal constants that may
         // move upstream in the future. I want to test this out here to settle on a good number.
-        let min_score = (7 + pattern.needle_text().len() as u32 * 14) / 3;
+        let min_score = (7 + pattern.needle_text().len() as u32 * 14).fast_div(mm);
         matches.sort_unstable_by_key(|&(i, score)| {
             let option = &options[i as usize];
             (
