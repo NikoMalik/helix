@@ -38,6 +38,7 @@ arc-swap = "1"
 regex = "1"
 bitflags.workspace = true
 foldhash.workspace = true
+hashbrown="0.16"
 url = "2.5.4"
 
 log = "0.4"

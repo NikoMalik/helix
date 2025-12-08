@@ -6,11 +6,12 @@ use arc_swap::{
     access::{DynAccess, DynGuard},
     ArcSwap,
 };
+use hashbrown::HashMap;
 use helix_view::{document::Mode, info::Info, input::KeyEvent};
 use serde::Deserialize;
 use std::{
     borrow::Cow,
-    collections::{BTreeSet, HashMap},
+    collections::BTreeSet,
     ops::{Deref, DerefMut},
     sync::Arc,
 };

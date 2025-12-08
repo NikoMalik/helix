@@ -28,11 +28,11 @@ use tui::{
     widgets::{Block, BorderType, Cell, Row, Table},
 };
 
+use hashbrown::HashMap;
 use tui::widgets::Widget;
 
 use std::{
     borrow::Cow,
-    collections::HashMap,
     io::Read,
     path::{Path, PathBuf},
     sync::{
@@ -912,6 +912,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         const dd: u64 = 2;
         let m = d.precompute_div();
         let mm = dd.precompute_div();
+        let directory = cx.editor.theme.get("ui.text.directory");
 
         // calculate the inner area inside the box
         let inner = block.inner(area);
@@ -934,58 +935,14 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                         for (i, (path, is_dir)) in
                             dir_content.iter().take(inner.height as usize).enumerate()
                         {
-                            let icons = ICONS.load();
-
-                            let dir = path.file_name();
-                            // If path is `..` then this will be `None` and signifies being the
-                            // previous directory, which said another way, is the currently open
-                            // directory we are viewing.
-                            let is_open = dir.is_none() && *is_dir;
-
-                            let name = dir
-                                // Path `..` does not have a name, and so will become `..` as a string.
-                                .map_or_else(|| Cow::Borrowed(".."), |dir| dir.to_string_lossy());
-
-                            if *is_dir {
-                                let dir = match icons.fs().directory(is_open) {
-                                    Some(icon) => format!("{icon} {name}/"),
-                                    None => format!("{name}/"),
-                                };
-
-                                surface.set_stringn(
-                                    inner.x,
-                                    inner.y + i as u16,
-                                    dir,
-                                    inner.width as usize,
-                                    cx.editor.theme.get("ui.text.directory"),
-                                );
-                            } else if let Some(icon) = icons.fs().from_path(path) {
-                                let icon = icon.to_span_with(|icon| format!("{icon} "));
-
-                                surface.set_stringn(
-                                    inner.x,
-                                    inner.y + i as u16,
-                                    &icon.content,
-                                    inner.width as usize,
-                                    icon.style,
-                                );
-
-                                surface.set_stringn(
-                                    inner.x + icon.width() as u16,
-                                    inner.y + i as u16,
-                                    name,
-                                    inner.width as usize,
-                                    text,
-                                );
-                            } else {
-                                surface.set_stringn(
-                                    inner.x,
-                                    inner.y + i as u16,
-                                    name,
-                                    inner.width as usize,
-                                    text,
-                                );
-                            }
+                            let style = if *is_dir { directory } else { text };
+                            surface.set_stringn(
+                                inner.x,
+                                inner.y + i as u16,
+                                path.to_string_lossy(),
+                                inner.width as usize,
+                                style,
+                            );
                         }
                         return;
                     }
@@ -1003,13 +960,14 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                 let height = end_line - start_line;
                 let text = doc.text().slice(..);
                 let start = text.line_to_char(start_line);
-                let middle = (text.line_to_char(start_line + height) as u64).fast_div(mm);
+                let middle =
+                    text.line_to_char(((start_line + height) as u64).fast_div(mm) as usize);
                 if height < inner.height as usize {
                     let text_fmt = doc.text_format(inner.width, None);
                     let annotations = TextAnnotations::default();
                     (offset.anchor, offset.vertical_offset) = char_idx_at_visual_offset(
                         text,
-                        middle as usize,
+                        middle,
                         // align to middle
                         -(inner.height as isize / 2),
                         0,

@@ -201,6 +201,7 @@ type FilePicker = Picker<PathBuf, FilePickerData>;
 
 pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
     use ignore::{types::TypesBuilder, WalkBuilder};
+    use std::time::Instant;
 
     let config = editor.config();
     let data = FilePickerData {
@@ -208,6 +209,7 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
         directory_style: editor.theme.get("ui.text.directory"),
     };
 
+    let now = Instant::now();
 
     let dedup_symlinks = config.file_picker.deduplicate_links;
     let absolute_root = root.canonicalize().unwrap_or_else(|_| root.clone());
@@ -221,14 +223,12 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
         .git_ignore(config.file_picker.git_ignore)
         .git_global(config.file_picker.git_global)
         .git_exclude(config.file_picker.git_exclude)
+        .sort_by_file_name(|name1, name2| name1.cmp(name2))
         .max_depth(config.file_picker.max_depth)
         .filter_entry(move |entry| filter_picker_entry(entry, &absolute_root, dedup_symlinks));
 
     walk_builder.add_custom_ignore_filename(helix_loader::config_dir().join("ignore"));
     walk_builder.add_custom_ignore_filename(".helix/ignore");
-    if config.file_picker.sorted {
-        walk_builder.sort_by_file_name(|name1, name2| name1.cmp(name2));
-    }
 
     // We want to exclude files that the editor can't handle yet
     let mut type_builder = TypesBuilder::new();
@@ -243,6 +243,14 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
         .build()
         .expect("failed to build excluded_types");
     walk_builder.types(excluded_types);
+    let mut files = walk_builder.build().filter_map(|entry| {
+        let entry = entry.ok()?;
+        if !entry.file_type()?.is_file() {
+            return None;
+        }
+        Some(entry.into_path())
+    });
+    log::debug!("file_picker init {:?}", Instant::now().duration_since(now));
 
     let columns = [PickerColumn::new(
         path::get_relative_dir(&root),
@@ -282,10 +290,32 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
     .always_show_headers()
     .with_preview(|_editor, path| Some((path.as_path().into(), None)))
     .with_title("Files".into());
+    let injector = picker.injector();
+    let timeout = std::time::Instant::now() + std::time::Duration::from_millis(30);
 
-    inject_files(picker.injector(), walk_builder, config.file_picker.sorted);
+    let mut hit_timeout = false;
+    for file in &mut files {
+        if injector.push(file).is_err() {
+            break;
+        }
+        if std::time::Instant::now() >= timeout {
+            hit_timeout = true;
+            break;
+        }
+    }
+    if hit_timeout {
+        std::thread::spawn(move || {
+            for file in files {
+                if injector.push(file).is_err() {
+                    break;
+                }
+            }
+        });
+    }
     picker
 }
+
+
 
 fn inject_files(
     injector: Injector<PathBuf, FilePickerData>,

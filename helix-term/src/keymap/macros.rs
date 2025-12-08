@@ -99,7 +99,7 @@ macro_rules! keymap {
         // modified from the hashmap! macro
         {
             let _cap = hashmap!(@count $($($key),+),*);
-            let mut _map = ::std::collections::HashMap::with_capacity(_cap);
+            let mut _map = ::hashbrown::HashMap::with_capacity(_cap);
             let mut _order = ::std::vec::Vec::with_capacity(_cap);
             $(
                 $(
