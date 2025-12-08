@@ -1152,7 +1152,7 @@ pub fn render(
                 ctrl!('d') => self.move_down_half_page(),
                 ctrl!('u') => self.move_up_half_page(),
                 key!('z') => {
-                    self.on_next_key = Some(Box::new(|_, tree, event| {
+                  self.on_next_key = Some(Box::new(|_, tree, event| {
                         match event {
                             key!('z') => tree.align_view_center(),
                             key!('t') => tree.align_view_top(),
