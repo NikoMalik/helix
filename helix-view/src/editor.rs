@@ -255,7 +255,7 @@ impl Default for FilePickerConfig {
             git_global: true,
             git_exclude: true,
             max_depth: None,
-            sorted: true,
+            sorted: false,
         }
     }
 }
