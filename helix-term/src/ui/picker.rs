@@ -904,6 +904,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
 
         let border_type = BorderType::new(cx.editor.config().rounded_corners);
         let block: Block<'_> = Block::bordered().border_type(border_type);
+        let text = cx.editor.theme.get("ui.text");
 
         // calculate the inner area inside the box
         let inner = block.inner(area);
@@ -985,13 +986,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                     let alt_text = preview.placeholder();
                     let x = inner.x + inner.width.saturating_sub(alt_text.len() as u16) / 2;
                     let y = inner.y + inner.height / 2;
-                    surface.set_stringn(
-                        x,
-                        y,
-                        alt_text,
-                        inner.width as usize,
-                        cx.editor.theme.get("ui.text"),
-                    );
+                    surface.set_stringn(x, y, alt_text, inner.width as usize, text);
                     return;
                 }
             };
