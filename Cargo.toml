@@ -28,8 +28,10 @@ lto = "fat"
 inherits = "release"
 lto = "fat"
 codegen-units = 1
+incremental = false
 strip = true
 opt-level = 3
+panic = "abort"
 
 [profile.integration]
 inherits = "test"
