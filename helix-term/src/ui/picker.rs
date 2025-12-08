@@ -913,10 +913,6 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         let block: Block<'_> = Block::bordered().border_type(border_type);
         let text = cx.editor.theme.get("ui.text");
 
-        const d: u32 = 2;
-        const dd: u64 = 2;
-        let m = d.precompute_div();
-        let mm = dd.precompute_div();
         let directory = cx.editor.theme.get("ui.text.directory");
 
         // calculate the inner area inside the box
@@ -954,7 +950,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
 
                     let alt_text = preview.placeholder();
                     let x = inner.x + inner.width.saturating_sub(alt_text.len() as u16) / 2;
-                    let y = ((inner.y + inner.height) as u32).fast_div(m) as u16;
+                    let y = inner.y + inner.height / 2;
                     surface.set_stringn(x, y, alt_text, inner.width as usize, text);
                     return;
                 }
@@ -965,8 +961,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                 let height = end_line - start_line;
                 let text = doc.text().slice(..);
                 let start = text.line_to_char(start_line);
-                let middle =
-                    text.line_to_char(((start_line + height) as u64).fast_div(mm) as usize);
+                let middle = text.line_to_char(start_line + height / 2);
                 if height < inner.height as usize {
                     let text_fmt = doc.text_format(inner.width, None);
                     let annotations = TextAnnotations::default();
@@ -1037,7 +1032,6 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         }
     }
 }
-
 impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I, D> {
     fn render(&mut self, area: Rect, surface: &mut Surface, cx: &mut Context) {
         let d: u32 = 2;
