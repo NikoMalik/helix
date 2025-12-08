@@ -1,6 +1,7 @@
 mod completion;
 mod document;
 pub(crate) mod editor;
+mod explorer;
 mod file_explorer;
 mod info;
 pub mod lsp;
@@ -13,6 +14,7 @@ pub mod prompt;
 mod spinner;
 mod statusline;
 mod text;
+mod tree;
 mod text_decorations;
 
 use crate::compositor::Compositor;
@@ -20,6 +22,7 @@ use crate::filter_picker_entry;
 use crate::job::{self, Callback};
 pub use completion::Completion;
 pub use editor::EditorView;
+pub use explorer::Explorer;
 pub use file_explorer::file_explorer;
 use helix_stdx::{path, rope};
 use helix_view::icons::ICONS;
@@ -31,6 +34,7 @@ pub use popup::Popup;
 pub use prompt::{Prompt, PromptEvent};
 pub use spinner::{ProgressSpinners, Spinner};
 pub use text::Text;
+pub use tree::{TreeOp, TreeView, TreeViewItem};
 
 use helix_view::Editor;
 use tui::text::{Span, Spans, ToSpan};
