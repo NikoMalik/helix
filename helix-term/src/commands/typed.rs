@@ -1935,14 +1935,43 @@ fn vsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
     if args.is_empty() {
         split(cx.editor, Action::VerticalSplit);
     } else {
-        for arg in args {
-            cx.editor
-                .open(&PathBuf::from(arg.as_ref()), Action::VerticalSplit)?;
-        }
+        open_impl(cx, args, Action::VerticalSplit)?;
     }
 
     Ok(())
 }
+
+fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow::Result<()> {
+    for arg in args {
+        let (path, pos) = crate::args::parse_file(&arg);
+        let path = helix_stdx::path::expand_tilde(path);
+        // If the path is a directory, open a file picker on that directory and update the status
+        // message
+        if let Ok(true) = std::fs::canonicalize(&path).map(|p| p.is_dir()) {
+            let callback = async move {
+                let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+                    move |editor: &mut Editor, compositor: &mut Compositor| {
+                        let picker =
+                            ui::file_picker(editor, path.into_owned()).with_default_action(action);
+                        compositor.push(Box::new(overlaid(picker)));
+                    },
+                ));
+                Ok(call)
+            };
+            cx.jobs.callback(callback);
+        } else {
+            // Otherwise, just open the file
+            let _ = cx.editor.open(&path, action)?;
+            let (view, doc) = current!(cx.editor);
+            let pos = Selection::point(pos_at_coords(doc.text().slice(..), pos, true));
+            doc.set_selection(view.id, pos);
+            // does not affect opening a buffer without pos
+            align_view(doc, view, Align::Center);
+        }
+    }
+    Ok(())
+}
+
 
 fn hsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -1952,15 +1981,11 @@ fn hsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
     if args.is_empty() {
         split(cx.editor, Action::HorizontalSplit);
     } else {
-        for arg in args {
-            cx.editor
-                .open(&PathBuf::from(arg.as_ref()), Action::HorizontalSplit)?;
-        }
+        open_impl(cx, args, Action::HorizontalSplit)?;
     }
 
     Ok(())
 }
-
 fn vsplit_new(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());

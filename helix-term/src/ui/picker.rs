@@ -89,7 +89,7 @@ pub type FileLocation<'a> = (PathOrId<'a>, Option<(usize, usize)>);
 
 pub enum CachedPreview {
     Document(Box<Document>),
-    Directory(Vec<(PathBuf, bool)>),
+    Directory(Vec<(String, bool)>),
     Binary,
     LargeFile,
     NotFound,
@@ -111,13 +111,12 @@ impl Preview<'_, '_> {
         }
     }
 
-    fn dir_content(&self) -> Option<&Vec<(PathBuf, bool)>> {
+    fn dir_content(&self) -> Option<&Vec<(String, bool)>> {
         match self {
             Preview::Cached(CachedPreview::Directory(dir_content)) => Some(dir_content),
             _ => None,
         }
     }
-
     /// Alternate text to show for the preview.
     fn placeholder(&self) -> &str {
         match *self {
@@ -263,8 +262,7 @@ pub struct Picker<T: 'static + Send + Sync, D: 'static> {
     widths: Vec<Constraint>,
 
     callback_fn: PickerCallback<T>,
-    custom_key_handlers: PickerKeyHandlers<T, D>,
-
+    default_action: Action,
     pub truncate_start: bool,
     /// Caches paths to documents
     preview_cache: HashMap<Arc<Path>, CachedPreview>,
@@ -283,7 +281,10 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         editor_data: D,
     ) -> (Nucleo<T>, Injector<T, D>) {
         let columns: Arc<[_]> = columns.into_iter().collect();
-        let matcher_columns = columns.iter().filter(|col| col.filter).count() as u32;
+        let matcher_columns = columns
+            .iter()
+            .filter(|col: &&Column<T, D>| col.filter)
+            .count() as u32;
         assert!(matcher_columns > 0);
         let matcher = Nucleo::new(
             Config::DEFAULT,
@@ -393,7 +394,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             completion_height: 0,
             widths,
             preview_cache: HashMap::new(),
-            custom_key_handlers: HashMap::new(),
+            default_action: Action::Replace,
             read_buffer: Vec::with_capacity(1024),
             file_fn: None,
             preview_highlight_handler: PreviewHighlightHandler::<T, D>::default().spawn(),
@@ -411,8 +412,10 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         self.always_show_headers = true;
         self
     }
-    pub fn with_key_handlers(mut self, handlers: PickerKeyHandlers<T, D>) -> Self {
-        self.custom_key_handlers = handlers;
+
+    pub fn with_default_action(mut self, action: Action) -> Self {
+        self.default_action = action;
+
         self
     }
 
@@ -538,17 +541,6 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         self.show_preview = !self.show_preview;
     }
 
-    fn custom_key_event_handler(&mut self, event: &KeyEvent, cx: &mut Context) -> EventResult {
-        if let (Some(callback), Some(selected)) =
-            (self.custom_key_handlers.get(event), self.selection())
-        {
-            callback(cx, selected, Arc::clone(&self.editor_data), self.cursor);
-            EventResult::Consumed(None)
-        } else {
-            EventResult::Ignored(None)
-        }
-    }
-
     fn prompt_handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
         if let EventResult::Consumed(_) = self.prompt.handle_event(event, cx) {
             self.handle_prompt_change(matches!(event, Event::Paste(_)));
@@ -625,8 +617,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                     // retrieve the `Arc<Path>` key. The `path` in scope here is a `&Path` and
                     // we can cheaply clone the key for the preview highlight handler.
                     let (path, preview) = self.preview_cache.get_key_value(path).unwrap();
-                    if matches!(preview, CachedPreview::Document(doc) if doc.language_config().is_none())
-                    {
+                    if matches!(preview, CachedPreview::Document(doc) if doc.syntax().is_none()) {
                         helix_event::send_blocking(&self.preview_highlight_handler, path.clone());
                     }
                     return Some((Preview::Cached(preview), range));
@@ -636,8 +627,23 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                 let preview = std::fs::metadata(&path)
                     .and_then(|metadata| {
                         if metadata.is_dir() {
-                            let files = super::directory_content(&path)?;
-                            Ok(CachedPreview::Directory(files))
+                            let files = super::directory_content(&path, editor)?;
+                            let file_names: Vec<_> = files
+                                .iter()
+                                .filter_map(|(file_path, is_dir)| {
+                                    let name = file_path
+                                        .strip_prefix(&path)
+                                        .map(|p| Some(p.as_os_str()))
+                                        .unwrap_or_else(|_| file_path.file_name())?
+                                        .to_string_lossy();
+                                    if *is_dir {
+                                        Some((format!("{}/", name), true))
+                                    } else {
+                                        Some((name.into_owned(), false))
+                                    }
+                                })
+                                .collect();
+                            Ok(CachedPreview::Directory(file_names))
                         } else if metadata.is_file() {
                             if metadata.len() > MAX_FILE_SIZE_FOR_PREVIEW {
                                 return Ok(CachedPreview::LargeFile);
@@ -653,27 +659,27 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                             if content_type.is_binary() {
                                 return Ok(CachedPreview::Binary);
                             }
-                            Document::open(
+                            let mut doc = Document::open(
                                 &path,
                                 None,
                                 false,
                                 editor.config.clone(),
                                 editor.syn_loader.clone(),
                             )
-                            .map_or(
-                                Err(std::io::Error::new(
-                                    std::io::ErrorKind::NotFound,
-                                    "Cannot open document",
-                                )),
-                                |doc| {
-                                    // Asynchronously highlight the new document
-                                    helix_event::send_blocking(
-                                        &self.preview_highlight_handler,
-                                        path.clone(),
-                                    );
-                                    Ok(CachedPreview::Document(Box::new(doc)))
-                                },
-                            )
+                            .or(Err(std::io::Error::new(
+                                std::io::ErrorKind::NotFound,
+                                "Cannot open document",
+                            )))?;
+                            let loader = editor.syn_loader.load();
+                            if let Some(language_config) = doc.detect_language_config(&loader) {
+                                doc.language = Some(language_config);
+                                // Asynchronously highlight the new document
+                                helix_event::send_blocking(
+                                    &self.preview_highlight_handler,
+                                    path.clone(),
+                                );
+                            }
+                            Ok(CachedPreview::Document(Box::new(doc)))
                         } else {
                             Err(std::io::Error::new(
                                 std::io::ErrorKind::NotFound,
@@ -691,7 +697,6 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             }
         }
     }
-
     fn render_picker(&mut self, area: Rect, surface: &mut Surface, cx: &mut Context) {
         let status = self.matcher.tick(10);
         let snapshot = self.matcher.snapshot();
@@ -939,7 +944,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
                             surface.set_stringn(
                                 inner.x,
                                 inner.y + i as u16,
-                                path.to_string_lossy(),
+                                path,
                                 inner.width as usize,
                                 style,
                             );
@@ -1076,30 +1081,25 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
         let close_fn = |picker: &mut Self| {
             // if the picker is very large don't store it as last_picker to avoid
             // excessive memory consumption
-            let callback: compositor::Callback = if picker.matcher.snapshot().item_count() > 100_000
-            {
-                Box::new(|compositor: &mut Compositor, _ctx| {
-                    // remove the layer
-                    compositor.pop();
-                })
-            } else {
-                // stop streaming in new items in the background, really we should
-                // be restarting the stream somehow once the picker gets
-                // reopened instead (like for an FS crawl) that would also remove the
-                // need for the special case above but that is pretty tricky
-                picker.version.fetch_add(1, atomic::Ordering::Relaxed);
-                Box::new(|compositor: &mut Compositor, _ctx| {
-                    // remove the layer
-                    compositor.last_picker = compositor.pop();
-                })
-            };
+            let callback: compositor::Callback =
+                if picker.matcher.snapshot().item_count() > 1_000_000 {
+                    Box::new(|compositor: &mut Compositor, _ctx| {
+                        // remove the layer
+                        compositor.pop();
+                    })
+                } else {
+                    // stop streaming in new items in the background, really we should
+                    // be restarting the stream somehow once the picker gets
+                    // reopened instead (like for an FS crawl) that would also remove the
+                    // need for the special case above but that is pretty tricky
+                    picker.version.fetch_add(1, atomic::Ordering::Relaxed);
+                    Box::new(|compositor: &mut Compositor, _ctx| {
+                        // remove the layer
+                        compositor.last_picker = compositor.pop();
+                    })
+                };
             EventResult::Consumed(Some(callback))
         };
-
-        // handle custom keybindings, if exist
-        if let EventResult::Consumed(_) = self.custom_key_event_handler(&key_event, ctx) {
-            return EventResult::Consumed(None);
-        }
 
         match key_event {
             shift!(Tab) | key!(Up) | ctrl!('p') => {
@@ -1123,7 +1123,7 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
             key!(Esc) | ctrl!('c') => return close_fn(self),
             alt!(Enter) => {
                 if let Some(option) = self.selection() {
-                    (self.callback_fn)(ctx, option, Action::Replace);
+                    (self.callback_fn)(ctx, option, self.default_action);
                 }
             }
             key!(Enter) => {
@@ -1147,7 +1147,7 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
                     self.handle_prompt_change(true);
                 } else {
                     if let Some(option) = self.selection() {
-                        (self.callback_fn)(ctx, option, Action::Replace);
+                        (self.callback_fn)(ctx, option, self.default_action);
                     }
                     if let Some(history_register) = self.prompt.history_register() {
                         if let Err(err) = ctx
@@ -1183,7 +1183,6 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
 
         EventResult::Consumed(None)
     }
-
     fn cursor(&self, area: Rect, editor: &Editor) -> (Option<Position>, CursorKind) {
         let block = Block::bordered();
         // calculate the inner area inside the box
@@ -1223,5 +1222,3 @@ impl<T: 'static + Send + Sync, D> Drop for Picker<T, D> {
 }
 
 type PickerCallback<T> = Box<dyn Fn(&mut Context, &T, Action)>;
-pub type PickerKeyHandler<T, D> = Box<dyn Fn(&mut Context, &T, Arc<D>, u32) + 'static>;
-pub type PickerKeyHandlers<T, D> = HashMap<KeyEvent, PickerKeyHandler<T, D>>;

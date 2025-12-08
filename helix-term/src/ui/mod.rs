@@ -53,6 +53,8 @@ impl AsRef<str> for Utf8PathBuf {
     }
 }
 
+
+
 pub fn prompt(
     cx: &mut crate::commands::Context,
     prompt: std::borrow::Cow<'static, str>,
@@ -190,6 +192,21 @@ pub fn raw_regex_prompt(
     prompt.recalculate_completion(cx.editor);
     // prompt
     cx.push_layer(Box::new(prompt));
+}
+
+fn get_excluded_types() -> ignore::types::Types {
+    use ignore::types::TypesBuilder;
+    let mut type_builder = TypesBuilder::new();
+    type_builder
+        .add(
+            "compressed",
+            "*.{zip,gz,bz2,zst,lzo,sz,tgz,tbz2,lz,lz4,lzma,lzo,z,Z,xz,7z,rar,cab}",
+        )
+        .expect("Invalid type definition");
+    type_builder.negate("all");
+    type_builder
+        .build()
+        .expect("failed to build excluded_types")
 }
 
 #[derive(Debug)]
@@ -397,23 +414,64 @@ fn inject_files(
     }
 }
 
-fn directory_content(path: &Path) -> Result<Vec<(PathBuf, bool)>, std::io::Error> {
-    let mut content: Vec<_> = std::fs::read_dir(path)?
-        .flatten()
-        .map(|entry| {
-            (
-                entry.path(),
-                entry.file_type().is_ok_and(|file_type| file_type.is_dir()),
-            )
+fn directory_content(root: &Path, editor: &Editor) -> Result<Vec<(PathBuf, bool)>, std::io::Error> {
+    use ignore::WalkBuilder;
+
+    let config = editor.config();
+
+    let mut walk_builder = WalkBuilder::new(root);
+
+    let mut content: Vec<(PathBuf, bool)> = walk_builder
+        .hidden(config.file_explorer.hidden)
+        .parents(config.file_explorer.parents)
+        .ignore(config.file_explorer.ignore)
+        .follow_links(config.file_explorer.follow_symlinks)
+        .git_ignore(config.file_explorer.git_ignore)
+        .git_global(config.file_explorer.git_global)
+        .git_exclude(config.file_explorer.git_exclude)
+        .max_depth(Some(1))
+        .add_custom_ignore_filename(helix_loader::config_dir().join("ignore"))
+        .add_custom_ignore_filename(".helix/ignore")
+        .types(get_excluded_types())
+        .build()
+        .filter_map(|entry| {
+            entry
+                .map(|entry| {
+                    let is_dir = entry
+                        .file_type()
+                        .is_some_and(|file_type| file_type.is_dir());
+                    let mut path = entry.path().to_path_buf();
+                    if is_dir && path != root && config.file_explorer.flatten_dirs {
+                        while let Some(single_child_directory) = get_child_if_single_dir(&path) {
+                            path = single_child_directory;
+                        }
+                    }
+                    (path, is_dir)
+                })
+                .ok()
+                .filter(|entry| entry.0 != root)
         })
         .collect();
 
     content.sort_by(|(path1, is_dir1), (path2, is_dir2)| (!is_dir1, path1).cmp(&(!is_dir2, path2)));
-    if path.parent().is_some() {
-        content.insert(0, (path.join(".."), true));
+
+    if root.parent().is_some() {
+        content.insert(0, (root.join(".."), true));
     }
+
     Ok(content)
 }
+
+fn get_child_if_single_dir(path: &Path) -> Option<PathBuf> {
+    let mut entries = path.read_dir().ok()?;
+    let entry = entries.next()?.ok()?;
+    if entries.next().is_none() && entry.file_type().is_ok_and(|file_type| file_type.is_dir()) {
+        Some(entry.path())
+    } else {
+        None
+    }
+}
+
 
 pub mod completers {
     use super::Utf8PathBuf;
@@ -739,7 +797,8 @@ pub mod completers {
                 .flatten()
                 .filter_map(|res| {
                     let entry = res.ok()?;
-                    if entry.metadata().ok()?.is_file() {
+                    let metadata = entry.metadata().ok()?;
+                    if metadata.is_file() || metadata.is_symlink() {
                         entry.file_name().into_string().ok()
                     } else {
                         None
