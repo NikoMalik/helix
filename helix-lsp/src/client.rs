@@ -10,6 +10,8 @@ use crate::lsp::{
     DidChangeWorkspaceFoldersParams, OneOf, PositionEncodingKind, SignatureHelp, Url,
     WorkspaceFolder, WorkspaceFoldersChangeEvent,
 };
+
+const TIMEOUT:u64 = 1;
 use helix_core::{find_workspace, syntax::config::LanguageServerFeature, ChangeSet, Rope};
 use helix_loader::VERSION_AND_GIT_HASH;
 use helix_stdx::path;
@@ -1211,7 +1213,7 @@ impl Client {
             work_done_progress_params: lsp::WorkDoneProgressParams { work_done_token },
         };
 
-        Some(self.call::<lsp::request::Formatting>(params))
+        Some(self.call_with_timeout::<lsp::request::Formatting>(&params, TIMEOUT))
     }
 
     pub fn text_document_range_formatting(
@@ -1238,7 +1240,12 @@ impl Client {
             work_done_progress_params: lsp::WorkDoneProgressParams { work_done_token },
         };
 
-        Some(self.call::<lsp::request::RangeFormatting>(params))
+        Some(
+            self.call_with_timeout::<lsp::request::RangeFormatting>(
+                &params,
+                TIMEOUT,
+            ),
+        )
     }
 
     pub fn text_document_diagnostic(
