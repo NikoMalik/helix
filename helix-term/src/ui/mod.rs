@@ -29,7 +29,7 @@ use helix_view::icons::ICONS;
 use helix_view::theme::Style;
 pub use markdown::Markdown;
 pub use menu::Menu;
-pub use picker::{Column as PickerColumn, FileLocation, Picker};
+pub use picker::{Column as PickerColumn, FileLocation, Injector, Picker};
 pub use popup::Popup;
 pub use prompt::{Prompt, PromptEvent};
 pub use spinner::{ProgressSpinners, Spinner};
@@ -202,7 +202,6 @@ type FilePicker = Picker<PathBuf, FilePickerData>;
 
 pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
     use ignore::{types::TypesBuilder, WalkBuilder};
-    use std::time::Instant;
 
     let config = editor.config();
     let data = FilePickerData {
@@ -210,7 +209,6 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
         directory_style: editor.theme.get("ui.text.directory"),
     };
 
-    let now = Instant::now();
 
     let dedup_symlinks = config.file_picker.deduplicate_links;
     let absolute_root = root.canonicalize().unwrap_or_else(|_| root.clone());
@@ -224,12 +222,14 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
         .git_ignore(config.file_picker.git_ignore)
         .git_global(config.file_picker.git_global)
         .git_exclude(config.file_picker.git_exclude)
-        .sort_by_file_name(|name1, name2| name1.cmp(name2))
         .max_depth(config.file_picker.max_depth)
         .filter_entry(move |entry| filter_picker_entry(entry, &absolute_root, dedup_symlinks));
 
     walk_builder.add_custom_ignore_filename(helix_loader::config_dir().join("ignore"));
     walk_builder.add_custom_ignore_filename(".helix/ignore");
+    if config.file_picker.sorted {
+        walk_builder.sort_by_file_name(|name1, name2| name1.cmp(name2));
+    }
 
     // We want to exclude files that the editor can't handle yet
     let mut type_builder = TypesBuilder::new();
@@ -244,14 +244,6 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
         .build()
         .expect("failed to build excluded_types");
     walk_builder.types(excluded_types);
-    let mut files = walk_builder.build().filter_map(|entry| {
-        let entry = entry.ok()?;
-        if !entry.file_type()?.is_file() {
-            return None;
-        }
-        Some(entry.into_path())
-    });
-    log::debug!("file_picker init {:?}", Instant::now().duration_since(now));
 
     let columns = [PickerColumn::new(
         path::get_relative_dir(&root),
@@ -291,11 +283,37 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
     .always_show_headers()
     .with_preview(|_editor, path| Some((path.as_path().into(), None)))
     .with_title("Files".into());
-    let injector = picker.injector();
-    let timeout = std::time::Instant::now() + std::time::Duration::from_millis(30);
+
+    inject_files(picker.injector(), walk_builder, config.file_picker.sorted);
+    picker
+}
+
+fn inject_files(
+    injector: Injector<PathBuf, FilePickerData>,
+    mut walk_builder: ignore::WalkBuilder,
+    sorted: bool,
+) {
+    use ignore::WalkState;
+    use std::collections::HashSet;
+    use std::time::{Duration, Instant};
+
+    // How long we are willing to wait for results before displaying the file picker.
+    let now = Instant::now();
+    let timeout = now + Duration::from_millis(30);
+
+    // Keep the track of injected files to prevent duplicates.
+    let mut injected_files = HashSet::new();
+    let mut files_iter = walk_builder.build().filter_map(|entry| {
+        let entry = entry.ok()?;
+        if !entry.file_type()?.is_file() {
+            return None;
+        }
+        Some(entry.into_path())
+    });
 
     let mut hit_timeout = false;
-    for file in &mut files {
+    for file in &mut files_iter {
+        injected_files.insert(file.clone());
         if injector.push(file).is_err() {
             break;
         }
@@ -305,15 +323,49 @@ pub fn file_picker(editor: &Editor, root: PathBuf) -> FilePicker {
         }
     }
     if hit_timeout {
+        // Finish injecting the files in a background thread to not block displaying the file picker.
         std::thread::spawn(move || {
-            for file in files {
-                if injector.push(file).is_err() {
-                    break;
+            // We want to lazily traverse the file tree as the file picker window can be closed
+            // before a full traversal is complete. If we are not required to present the file list
+            // in the sorted order, we can build an instance of WalkParallel to speed things up.
+            if sorted {
+                for file in files_iter {
+                    if injector.push(file).is_err() {
+                        break;
+                    }
                 }
+            } else {
+                let injector = &injector;
+                let returned_files = &injected_files;
+                let num_threads = std::thread::available_parallelism().map_or(0, |v| v.get());
+
+                let walk_parallel = walk_builder.threads(num_threads).build_parallel();
+                walk_parallel.run(|| {
+                    Box::new(move |path| {
+                        if let Ok(path) = path {
+                            if path
+                                .file_type()
+                                .is_some_and(|file_type| file_type.is_file())
+                            {
+                                let path = path.into_path();
+                                if !returned_files.contains(&path) && injector.push(path).is_err() {
+                                    // Injector is shut down. Tell WalkParallel to stop.
+                                    return WalkState::Quit;
+                                }
+                            }
+                        }
+
+                        // If path is a directory entry, continue descending recursively.
+                        WalkState::Continue
+                    })
+                });
             }
+
+            log::debug!("file_picker init {:?}", Instant::now().duration_since(now));
         });
+    } else {
+        log::debug!("file_picker init {:?}", Instant::now().duration_since(now));
     }
-    picker
 }
 
 fn directory_content(path: &Path) -> Result<Vec<(PathBuf, bool)>, std::io::Error> {
