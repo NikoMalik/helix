@@ -272,7 +272,7 @@ impl Explorer {
         self.state.focus = false;
     }
 
-    fn close(&mut self) {
+    pub fn close(&mut self) {
         self.state.focus = false;
         self.state.open = false;
     }

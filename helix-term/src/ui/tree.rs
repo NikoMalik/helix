@@ -306,6 +306,14 @@ pub struct TreeView<T: TreeViewItem> {
 
     #[allow(clippy::type_complexity)]
     on_next_key: Option<Box<dyn FnMut(&mut Context, &mut Self, &KeyEvent) -> Result<()>>>,
+
+    state: TreeViewState,
+}
+
+#[derive(Default)]
+pub struct TreeViewState {
+    pub focus: bool,
+    pub open: bool,
 }
 
 impl<T: TreeViewItem> TreeView<T> {
@@ -329,6 +337,7 @@ impl<T: TreeViewItem> TreeView<T> {
             on_next_key: None,
             search_prompt: None,
             search_str: "".into(),
+            state: TreeViewState { focus: true, open: true },
         })
     }
 
@@ -468,6 +477,25 @@ impl<T: TreeViewItem> TreeView<T> {
 
     fn move_rightmost(&mut self) {
         self.move_right(usize::MAX / 2)
+    }
+
+    pub fn focus(&mut self) {
+        self.state.focus = true;
+        self.state.open = true;
+    }
+    pub fn unfocus(&mut self) {
+        self.state.focus = false;
+    }
+    pub fn close(&mut self) {
+        self.state.open = false;
+        self.state.focus = false;
+    }
+    pub fn is_open(&self) -> bool {
+        self.state.open
+    }
+
+    pub fn is_focused(&self) -> bool {
+        self.state.focus
     }
 
     fn restore_saved_view(&mut self) -> Result<()> {
@@ -876,6 +904,9 @@ pub fn render(
     surface: &mut Surface,
     cx: &mut Context,
 ) {
+    if !self.state.open {
+        return; 
+    }
     use tui::text::Span;
 
     let text_style = cx.editor.theme.get(&self.tree_symbol_style);

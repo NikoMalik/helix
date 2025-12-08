@@ -550,6 +550,7 @@ impl MappableCommand {
         rotate_view, "Goto next window",
         rotate_view_reverse, "Goto previous window",
         hsplit, "Horizontal bottom split",
+        close_tree_view, "Close tree view",
         hsplit_new, "Horizontal bottom split scratch buffer",
         vsplit, "Vertical right split",
         vsplit_new, "Vertical right split scratch buffer",
@@ -876,6 +877,7 @@ fn reveal_file(cx: &mut Context, path: Option<PathBuf>) {
  cx.callback.push(Box::new(
         |compositor: &mut Compositor, cx: &mut compositor::Context| {
             if let Some(editor) = compositor.find::<ui::EditorView>() {
+                
                 (|| match editor.explorer.as_mut() {
                 Some(explorer) => match path {
                         Some(path) => explorer.reveal_file(path),
@@ -897,6 +899,16 @@ fn reveal_file(cx: &mut Context, path: Option<PathBuf>) {
 
 fn reveal_current_file(cx: &mut Context) {
     reveal_file(cx, None)
+}
+
+fn close_tree_view(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor: &mut Compositor, _| {
+        if let Some(editor) = compositor.find::<ui::EditorView>() {
+            if let Some(tree_view) = editor.explorer.as_mut() {
+                tree_view.close();
+            }
+        }
+    }));
 }
 
 fn extend_to_line_end(cx: &mut Context) {
