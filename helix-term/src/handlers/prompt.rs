@@ -10,9 +10,6 @@ pub(super) fn register_hooks(_handlers: &Handlers) {
         job::dispatch_blocking(move |_, compositor| {
             if compositor.find::<ui::Prompt>().is_some() {
                 compositor.remove_type::<ui::Prompt>();
-                job::RequireRender::Render
-            } else {
-                job::RequireRender::Skip
             }
         });
         Ok(())

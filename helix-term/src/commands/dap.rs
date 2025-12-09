@@ -1,7 +1,7 @@
 use super::{Context, Editor};
 use crate::{
     compositor::{self, Compositor},
-    job::{Callback, Jobs,RequireRender},
+    job::{Callback, Jobs},
     ui::{self, overlay::overlaid, Picker, Popup, Prompt, PromptEvent, Text},
 };
 use dap::{StackFrame, Thread, ThreadStates};
@@ -23,7 +23,7 @@ use helix_view::handlers::dap::{breakpoints_changed, jump_to_stack_frame, select
 
 fn thread_picker(
     cx: &mut Context,
-    callback_fn: impl Fn(&mut Editor, &dap::Thread)-> RequireRender + Send + 'static,
+    callback_fn: impl Fn(&mut Editor, &dap::Thread) + Send + 'static,
 ) {
     let debugger = debugger!(cx.editor);
 
@@ -34,11 +34,10 @@ fn thread_picker(
         move |editor, compositor, response: dap::requests::ThreadsResponse| {
             let threads = response.threads;
             if threads.len() == 1 {
-                return callback_fn(editor, &threads[0]);
+                callback_fn(editor, &threads[0]);
+                return;
             }
-            let Some(debugger) = editor.debug_adapters.get_active_client_mut() else {
-                return RequireRender::Skip;
-            };
+            let debugger = debugger!(editor);
 
             let thread_states = debugger.thread_states.clone();
             let columns = [
@@ -56,9 +55,7 @@ fn thread_picker(
                 0,
                 threads,
                 thread_states,
-                 move |cx, thread, _action| {
-                    callback_fn(cx.editor, thread);
-                },
+                move |cx, thread, _action| callback_fn(cx.editor, thread),
             )
             .with_preview(move |editor, thread| {
                 let frames = editor
@@ -76,7 +73,6 @@ fn thread_picker(
                 Some((path.into(), pos))
             });
             compositor.push(Box::new(picker));
-            RequireRender::Render
         },
     );
 }
@@ -101,7 +97,7 @@ fn dap_callback<T, F>(
     callback: F,
 ) where
     T: for<'de> serde::Deserialize<'de> + Send + 'static,
-    F: FnOnce(&mut Editor, &mut Compositor, T)-> RequireRender + Send + 'static,
+    F: FnOnce(&mut Editor, &mut Compositor, T) + Send + 'static,
 {
     let callback = Box::pin(async move {
         let json = call.await?;
@@ -207,7 +203,6 @@ pub fn dap_start_impl(
         // if let Err(e) = result {
         //     editor.set_error(format!("Failed {} target: {}", template.request, e));
         // }
-        RequireRender::Skip
     };
 
     let debugger = match cx.editor.debug_adapters.get_client_mut(id) {
@@ -279,7 +274,6 @@ pub fn dap_launch(cx: &mut Context) {
                         Callback::EditorCompositor(Box::new(move |_editor, compositor| {
                             let prompt = debug_parameter_prompt(completions, name, Vec::new());
                             compositor.push(Box::new(prompt));
-                            RequireRender::Render
                         }));
                     Ok(call)
                 });
@@ -315,10 +309,7 @@ pub fn dap_restart(cx: &mut Context) {
     dap_callback(
         cx.jobs,
         debugger.restart(),
-        |editor, _compositor, _resp: ()| {
-            editor.set_status("Debugging session restarted");
-            RequireRender::Render
-        },
+        |editor, _compositor, _resp: ()| editor.set_status("Debugging session restarted"),
     );
 }
 
@@ -377,7 +368,6 @@ fn debug_parameter_prompt(
                         Callback::EditorCompositor(Box::new(move |_editor, compositor| {
                             let prompt = debug_parameter_prompt(completions, config_name, params);
                             compositor.push(Box::new(prompt));
-                            RequireRender::Render
                         }));
                     Ok(call)
                 });
@@ -445,14 +435,8 @@ pub fn dap_continue(cx: &mut Context) {
             cx.jobs,
             request,
             |editor, _compositor, _response: dap::requests::ContinueResponse| {
-                 if let Some(debugger) = editor.debug_adapters.get_active_client_mut() {
-                    debugger.resume_application();
-                    RequireRender::Render
-                } else {
-                    RequireRender::Skip
-                }
+                debugger!(editor).resume_application();
             },
-
         );
     } else {
         cx.editor
@@ -462,15 +446,12 @@ pub fn dap_continue(cx: &mut Context) {
 
 pub fn dap_pause(cx: &mut Context) {
     thread_picker(cx, |editor, thread| {
-        let Some(debugger) = editor.debug_adapters.get_active_client_mut() else {
-            return RequireRender::Skip;
-        };
+        let debugger = debugger!(editor);
         let request = debugger.pause(thread.id);
         // NOTE: we don't need to set active thread id here because DAP will emit a "stopped" event
         if let Err(e) = block_on(request) {
             editor.set_error(format!("Failed to pause: {}", e));
         }
-        RequireRender::Render
     })
 }
 
@@ -481,12 +462,7 @@ pub fn dap_step_in(cx: &mut Context) {
         let request = debugger.step_in(thread_id);
 
         dap_callback(cx.jobs, request, |editor, _compositor, _response: ()| {
-             if let Some(debugger) = editor.debug_adapters.get_active_client_mut() {
-                debugger.resume_application();
-                RequireRender::Render
-            } else {
-                RequireRender::Skip
-            }
+            debugger!(editor).resume_application();
         });
     } else {
         cx.editor
@@ -500,12 +476,7 @@ pub fn dap_step_out(cx: &mut Context) {
     if let Some(thread_id) = debugger.thread_id {
         let request = debugger.step_out(thread_id);
         dap_callback(cx.jobs, request, |editor, _compositor, _response: ()| {
-             if let Some(debugger) = editor.debug_adapters.get_active_client_mut() {
-                debugger.resume_application();
-                RequireRender::Render
-            } else {
-                RequireRender::Skip
-            }
+            debugger!(editor).resume_application();
         });
     } else {
         cx.editor
@@ -519,12 +490,7 @@ pub fn dap_next(cx: &mut Context) {
     if let Some(thread_id) = debugger.thread_id {
         let request = debugger.next(thread_id);
         dap_callback(cx.jobs, request, |editor, _compositor, _response: ()| {
-            if let Some(debugger) = editor.debug_adapters.get_active_client_mut() {
-                debugger.resume_application();
-                RequireRender::Render
-            } else {
-                RequireRender::Skip
-            }
+            debugger!(editor).resume_application();
         });
     } else {
         cx.editor
@@ -633,7 +599,6 @@ pub fn dap_terminate(cx: &mut Context) {
         dap_callback(cx.jobs, request, |editor, _compositor, _response: ()| {
             // editor.set_error(format!("Failed to disconnect: {}", e));
             editor.debug_adapters.unset_active_client();
-            RequireRender::Skip
         });
     } else {
         cx.editor.debug_adapters.unset_active_client();
@@ -654,7 +619,6 @@ pub fn dap_enable_exceptions(cx: &mut Context) {
         cx.jobs,
         request,
         |_editor, _compositor, _response: dap::requests::SetExceptionBreakpointsResponse| {
-            RequireRender::Skip
             // editor.set_error(format!("Failed to set up exception breakpoints: {}", e));
         },
     )
@@ -669,7 +633,6 @@ pub fn dap_disable_exceptions(cx: &mut Context) {
         cx.jobs,
         request,
         |_editor, _compositor, _response: dap::requests::SetExceptionBreakpointsResponse| {
-            RequireRender::Skip
             // editor.set_error(format!("Failed to set up exception breakpoints: {}", e));
         },
     )
@@ -711,7 +674,6 @@ pub fn dap_edit_condition(cx: &mut Context) {
                     prompt.insert_str(&condition, editor)
                 }
                 compositor.push(Box::new(prompt));
-                RequireRender::Render
             }));
             Ok(call)
         });
@@ -753,7 +715,6 @@ pub fn dap_edit_log(cx: &mut Context) {
                     prompt.insert_str(&log_message, editor);
                 }
                 compositor.push(Box::new(prompt));
-                RequireRender::Render
             }));
             Ok(call)
         });
@@ -764,7 +725,6 @@ pub fn dap_edit_log(cx: &mut Context) {
 pub fn dap_switch_thread(cx: &mut Context) {
     thread_picker(cx, |editor, thread| {
         block_on(select_thread_id(editor, thread.id, true));
-        RequireRender::Render
     })
 }
 pub fn dap_switch_stack_frame(cx: &mut Context) {

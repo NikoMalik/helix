@@ -94,7 +94,6 @@ pub(super) fn register_hooks(handlers: &Handlers) {
         for doc_id in doc_ids {
             request_document_diagnostics(event.editor, doc_id);
         }
-        
 
         Ok(())
     });
@@ -123,7 +122,6 @@ impl helix_event::AsyncHook for PullDiagnosticsHandler {
             for document_id in document_ids {
                 request_document_diagnostics(editor, document_id);
             }
-            job::RequireRender::Skip
         })
     }
 }
@@ -157,7 +155,6 @@ impl helix_event::AsyncHook for PullAllDocumentsDiagnosticHandler {
                     language_servers.clone(),
                 );
             }
-            job::RequireRender::Render
         })
     }
 }
@@ -219,7 +216,6 @@ fn request_document_diagnostics_for_language_severs(
                 Some(Some((Ok(result), provider, uri))) => {
                     job::dispatch(move |editor, _| {
                         handle_pull_diagnostics_response(editor, result, provider, uri, doc_id);
-                        job::RequireRender::Render
                     })
                     .await;
                 }
@@ -252,7 +248,6 @@ fn request_document_diagnostics_for_language_severs(
                     doc_id,
                     retry_language_servers,
                 );
-                job::RequireRender::Skip
             })
             .await;
         }

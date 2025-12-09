@@ -32,13 +32,11 @@ use helix_view::{
 
 use crate::{
     compositor::{self, Compositor},
-    job::{Callback, RequireRender},
+    job::Callback,
     ui::{self, overlay::overlaid, FileLocation, Picker, Popup, PromptEvent},
 };
 
-use std::{cmp::Ordering, fmt::Display, future::Future, path::Path};
-use hashbrown::HashSet;
-
+use std::{cmp::Ordering, collections::HashSet, fmt::Display, future::Future, path::Path};
 
 /// Gets the first language server that is attached to a document which supports a specific feature.
 /// If there is no configured language server that supports the feature, this displays a status message.
@@ -464,8 +462,7 @@ pub fn symbol_picker(cx: &mut Context) {
             .with_title("Document Symbols".into())
             .truncate_start(false);
 
-            compositor.push(Box::new(overlaid(picker)));
-            RequireRender::Render
+            compositor.push(Box::new(overlaid(picker)))
         };
 
         Ok(Callback::EditorCompositor(Box::new(call)))
@@ -803,8 +800,7 @@ pub fn code_action(cx: &mut Context) {
         let call = move |editor: &mut Editor, compositor: &mut Compositor| {
             if actions.is_empty() {
                 editor.set_error("No code actions available");
-                return RequireRender::Render;
-                
+                return;
             }
             let mut picker = ui::Menu::new(actions, (), move |editor, action, event| {
                 if event != PromptEvent::Validate {
@@ -858,7 +854,6 @@ pub fn code_action(cx: &mut Context) {
                 .auto_close(true);
 
             compositor.replace_or_push("code-action", popup);
-            RequireRender::Render
         };
 
         Ok(Callback::EditorCompositor(Box::new(call)))
@@ -988,10 +983,8 @@ where
                     LanguageServerFeature::GotoImplementation => "No implementation found.",
                     _ => "No location found.",
                 });
-                RequireRender::Render 
             } else {
                 goto_impl("Goto Implementation", editor, compositor, locations);
-                RequireRender::Render
             }
         };
         Ok(Callback::EditorCompositor(Box::new(call)))
@@ -1070,7 +1063,6 @@ pub fn goto_reference(cx: &mut Context) {
             } else {
                 goto_impl("Goto Reference", editor, compositor, locations);
             }
-            RequireRender::Render
         };
         Ok(Callback::EditorCompositor(Box::new(call)))
     });
@@ -1126,14 +1118,13 @@ pub fn hover(cx: &mut Context) {
         let call = move |editor: &mut Editor, compositor: &mut Compositor| {
             if hovers.is_empty() {
                 editor.set_status("No hover results available.");
-                return RequireRender::Render;
+                return;
             }
 
             // create new popup
             let contents = Hover::new(hovers, editor.syn_loader.clone());
             let popup = Popup::new(Hover::ID, contents).auto_close(true);
             compositor.replace_or_push(Hover::ID, popup);
-            RequireRender::Render
         };
         Ok(Callback::EditorCompositor(Box::new(call)))
     });
@@ -1264,14 +1255,13 @@ pub fn rename_symbol(cx: &mut Context) {
                     Ok(p) => p,
                     Err(e) => {
                         editor.set_error(e);
-                        return RequireRender::Render;
+                        return;
                     }
                 };
 
                 let prompt = create_rename_prompt(editor, prefill, history_register, Some(ls_id));
 
                 compositor.push(prompt);
-                RequireRender::Render
             },
         );
     } else {
@@ -1296,7 +1286,7 @@ pub fn select_references_to_symbol_under_cursor(cx: &mut Context) {
         move |editor, _compositor, response: Option<Vec<lsp::DocumentHighlight>>| {
             let document_highlights = match response {
                 Some(highlights) if !highlights.is_empty() => highlights,
-                 _ =>return RequireRender::Skip,
+                _ => return,
             };
             let (view, doc) = current!(editor);
             let text = doc.text();
@@ -1317,7 +1307,6 @@ pub fn select_references_to_symbol_under_cursor(cx: &mut Context) {
                 .collect();
             let selection = Selection::new(ranges, primary_index);
             doc.set_selection(view.id, selection);
-            RequireRender::Render
         },
     );
 }
@@ -1394,13 +1383,13 @@ fn compute_inlay_hints_for_view(
         move |editor, _compositor, response: Option<Vec<lsp::InlayHint>>| {
             // The config was modified or the window was closed while the request was in flight
             if !editor.config().lsp.display_inlay_hints || editor.tree.try_get(view_id).is_none() {
-                return RequireRender::Skip;
+                return;
             }
 
             // Add annotations to relevant document, not the current one (it may have changed in between)
             let doc = match editor.documents.get_mut(&doc_id) {
                 Some(doc) => doc,
-                None => return RequireRender::Skip,
+                None => return,
             };
 
             // If we have neither hints nor an LSP, empty the inlay hints since they're now oudated
@@ -1412,7 +1401,7 @@ fn compute_inlay_hints_for_view(
                         DocumentInlayHints::empty_with_id(new_doc_inlay_hints_id),
                     );
                     doc.inlay_hints_oudated = false;
-                    return RequireRender::Render;
+                    return;
                 }
             };
 
@@ -1503,7 +1492,6 @@ fn compute_inlay_hints_for_view(
                 },
             );
             doc.inlay_hints_oudated = false;
-            RequireRender::Render
         },
     );
 

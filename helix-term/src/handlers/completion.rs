@@ -15,7 +15,7 @@ use crate::commands;
 use crate::compositor::Compositor;
 use crate::events::{OnModeSwitch, PostCommand, PostInsertChar};
 use crate::handlers::completion::request::{request_incomplete_completion_list, Trigger};
-use crate::job::{dispatch, RequireRender};
+use crate::job::dispatch;
 use crate::keymap::MappableCommand;
 use crate::ui::lsp::signature_help::SignatureHelp;
 use crate::ui::{self, Popup};
@@ -55,11 +55,11 @@ async fn replace_completions(
         dispatch(move |editor, compositor| {
             let editor_view = compositor.find::<ui::EditorView>().unwrap();
             let Some(completion) = &mut editor_view.completion else {
-                return RequireRender::Skip;
+                return;
             };
             if handle.is_canceled() {
                 log::info!("dropping outdated completion response");
-                return RequireRender::Skip;
+                return;
             }
 
             completion.replace_provider_completions(&mut response, is_incomplete);
@@ -75,7 +75,6 @@ async fn replace_completions(
                     .active_completions
                     .insert(response.provider, response.context);
             }
-            RequireRender::Skip
         })
         .await;
     }
@@ -87,7 +86,7 @@ fn show_completion(
     mut items: Vec<CompletionItem>,
     context: HashMap<CompletionProvider, ResponseContext>,
     trigger: Trigger,
-)-> RequireRender{
+) {
     let (view, doc) = current_ref!(editor);
     // check if the completion request is stale.
     //
@@ -95,13 +94,13 @@ fn show_completion(
     //switch document/view or leave insert mode. In all of thoise cases the
     // completion should be discarded
     if editor.mode != Mode::Insert || view.id != trigger.view || doc.id() != trigger.doc {
-        return RequireRender::Skip;
+        return;
     }
 
     let size = compositor.size();
     let ui = compositor.find::<ui::EditorView>().unwrap();
     if ui.completion.is_some() {
-        return RequireRender::Skip;
+        return;
     }
     word::retain_valid_completions(trigger, doc, view.id, &mut items);
     editor.handlers.completions.active_completions = context;
@@ -114,7 +113,6 @@ fn show_completion(
     if matches!((completion_area, signature_help_area),(Some(a), Some(b)) if a.intersects(b)) {
         compositor.remove(SignatureHelp::ID);
     }
-    RequireRender::Render
 }
 
 pub fn trigger_auto_completion(editor: &Editor, trigger_char_only: bool) {

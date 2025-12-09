@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate helix_view;
-use job::RequireRender;
+
 pub mod application;
 pub mod args;
 pub mod commands;
@@ -80,12 +80,11 @@ fn open_external_url_callback(
         for cmd in commands {
             let mut command: tokio::process::Command = cmd.into();
             if command.output().await.is_ok() {
-                return Ok(job::Callback::Editor(Box::new(|_| RequireRender::Render)));
+                return Ok(job::Callback::Editor(Box::new(|_| {})));
             }
         }
         Ok(job::Callback::Editor(Box::new(move |editor| {
-            editor.set_error("Opening URL in external program failed");
-            RequireRender::Render
+            editor.set_error("Opening URL in external program failed")
         })))
     }
 }

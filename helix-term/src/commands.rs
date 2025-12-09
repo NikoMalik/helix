@@ -67,7 +67,7 @@ use movement::Movement;
 use crate::{
     compositor::{self, Component, Compositor},
     filter_picker_entry,
-    job::{Callback,RequireRender},
+    job::Callback,
     ui::{self, overlay::overlaid, Picker, PickerColumn, Popup, Prompt, PromptEvent},
 };
 
@@ -158,7 +158,7 @@ impl Context<'_> {
         callback: F,
     ) where
         T: Send + 'static,
-        F: FnOnce(&mut Editor, &mut Compositor, T) -> RequireRender + Send + 'static,
+        F: FnOnce(&mut Editor, &mut Compositor, T) + Send + 'static,
     {
         self.jobs.callback(make_job_callback(call, callback));
     }
@@ -188,7 +188,7 @@ fn make_job_callback<T, F>(
 ) -> std::pin::Pin<Box<impl Future<Output = Result<Callback, anyhow::Error>>>>
 where
     T: Send + 'static,
-    F: FnOnce(&mut Editor, &mut Compositor, T) -> RequireRender + Send + 'static,
+    F: FnOnce(&mut Editor, &mut Compositor, T) + Send + 'static,
 {
     Box::pin(async move {
         let response = call.await?;
@@ -2979,7 +2979,7 @@ fn global_search(cx: &mut Context) {
         Some((path.as_path().into(), Some((*line_num, *line_num))))
     })
     .with_history_register(Some(reg))
-    .with_dynamic_query(get_files, Some(200))
+    .with_dynamic_query(get_files, Some(275))
     .with_title("Search".into());
 
     cx.push_layer(Box::new(overlaid(picker)));
@@ -4030,7 +4030,7 @@ async fn make_format_callback(
 
     let call: job::Callback = Callback::Editor(Box::new(move |editor| {
         if !editor.documents.contains_key(&doc_id) || !editor.tree.contains(view_id) {
-            return RequireRender::Skip;
+            return;
         }
 
         let scrolloff = editor.config().scrolloff;
@@ -4051,7 +4051,7 @@ async fn make_format_callback(
             Err(err) => {
                 if write.is_none() {
                     editor.set_error(err.to_string());
-                    return RequireRender::Render;
+                    return;
                 }
                 log::info!("failed to format '{}': {err}", doc.display_name());
             }
@@ -4063,7 +4063,6 @@ async fn make_format_callback(
                 editor.set_error(format!("Error saving: {}", err));
             }
         }
-        RequireRender::Skip
     }));
 
     Ok(call)
@@ -5493,14 +5492,13 @@ fn format_selections(cx: &mut Context) {
                     helix_lsp::util::generate_transaction_from_edits(&text, res, offset_encoding);
                 job::dispatch(move |editor, _compositor| {
                     let Some(doc) = editor.document_mut(doc_id) else {
-                        return job::RequireRender::Skip;
+                        return;
                     };
                     // Updating a desynced document causes problems with applying the transaction
                     if doc.version() != doc_version {
-                        return job::RequireRender::Skip;
+                        return;
                     }
                     doc.apply(&transaction, view_id);
-                    job::RequireRender::Render
                 })
                 .await
             }

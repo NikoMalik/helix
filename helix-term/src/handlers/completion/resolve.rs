@@ -9,7 +9,7 @@ use helix_view::Editor;
 
 use super::LspCompletionItem;
 use crate::handlers::completion::CompletionItem;
-use crate::job::{self, RequireRender};
+use crate::job;
 
 /// A hook for resolving incomplete completion items.
 ///
@@ -166,10 +166,7 @@ impl ResolveRequest {
                     }
                 });
                 completion.replace_item(&*self.item, resolved_item);
-                RequireRender::Render
-            } else {
-                RequireRender::Skip
-            }
+            };
         })
         .await
     }

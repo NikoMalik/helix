@@ -25,7 +25,7 @@ use crate::{
     compositor::{Compositor, Event},
     config::Config,
     handlers,
-    job::{Jobs,RequireRender},
+    job::Jobs,
     keymap::Keymaps,
     ui::{self, overlay::overlaid},
 };
@@ -340,9 +340,8 @@ impl Application {
                     self.handle_terminal_events(event).await;
                 }
                 Some(callback) = self.jobs.callbacks.recv() => {
-                     if self.jobs.handle_callback(&mut self.editor, &mut self.compositor, Ok(Some(callback))) == RequireRender::Render {
-                        self.render().await;
-                    }
+                    self.jobs.handle_callback(&mut self.editor, &mut self.compositor, Ok(Some(callback)));
+                    self.render().await;
                 }
                 Some(msg) = self.jobs.status_messages.recv() => {
                     let severity = match msg.severity{
@@ -356,9 +355,8 @@ impl Application {
                     helix_event::request_redraw();
                 }
                 Some(callback) = self.jobs.wait_futures.next() => {
-                     if self.jobs.handle_callback(&mut self.editor, &mut self.compositor, callback) == RequireRender::Render {
-                        self.render().await;
-                    }
+                    self.jobs.handle_callback(&mut self.editor, &mut self.compositor, callback);
+                    self.render().await;
                 }
                 event = self.editor.wait_event() => {
                     let _idle_handled = self.handle_editor_event(event).await;

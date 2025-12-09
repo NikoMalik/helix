@@ -174,7 +174,6 @@ pub fn raw_regex_prompt(
                                                 )))
                                                 .auto_close(true);
                                             compositor.replace_or_push("invalid-regex", popup);
-                                            job::RequireRender::Render
                                         },
                                     ));
                                     Ok(call)

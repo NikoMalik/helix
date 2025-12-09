@@ -39,7 +39,6 @@ impl helix_event::AsyncHook for DocumentColorsHandler {
             for doc in docs {
                 request_document_colors(editor, doc);
             }
-            job::RequireRender::Skip
         });
     }
 }
@@ -107,19 +106,18 @@ fn attach_document_colors(
     editor: &mut Editor,
     doc_id: DocumentId,
     mut doc_colors: Vec<(usize, lsp::Color)>,
-)-> job::RequireRender {
-
+) {
     if !editor.config().lsp.display_color_swatches {
-        return job::RequireRender::Skip;
+        return;
     }
 
     let Some(doc) = editor.documents.get_mut(&doc_id) else {
-        return job::RequireRender::Skip;
+        return;
     };
 
     if doc_colors.is_empty() {
         doc.color_swatches.take();
-        return job::RequireRender::Render;
+        return;
     }
 
     doc_colors.sort_by_key(|(pos, _)| *pos);
@@ -144,8 +142,6 @@ fn attach_document_colors(
         colors,
         color_swatches_padding,
     });
-
-    job::RequireRender::Render
 }
 
 pub(super) fn register_hooks(handlers: &Handlers) {

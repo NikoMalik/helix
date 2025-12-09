@@ -9,17 +9,8 @@ use futures_util::future::{BoxFuture, Future, FutureExt};
 use futures_util::stream::{FuturesUnordered, StreamExt};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
-
-/// Whether a callback should trigger a render.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RequireRender {
-    Render,
-    Skip,
-}
-
-pub type EditorCompositorCallback =
-    Box<dyn FnOnce(&mut Editor, &mut Compositor) -> RequireRender + Send>;
-pub type EditorCallback = Box<dyn FnOnce(&mut Editor) -> RequireRender + Send>;
+pub type EditorCompositorCallback = Box<dyn FnOnce(&mut Editor, &mut Compositor) + Send>;
+pub type EditorCallback = Box<dyn FnOnce(&mut Editor) + Send>;
 
 runtime_local! {
     static JOB_QUEUE: OnceCell<Sender<Callback>> = OnceCell::new();
@@ -29,14 +20,14 @@ pub async fn dispatch_callback(job: Callback) {
     let _ = JOB_QUEUE.wait().send(job).await;
 }
 
-pub async fn dispatch(job: impl FnOnce(&mut Editor, &mut Compositor) ->RequireRender + Send + 'static) {
+pub async fn dispatch(job: impl FnOnce(&mut Editor, &mut Compositor) + Send + 'static) {
     let _ = JOB_QUEUE
         .wait()
         .send(Callback::EditorCompositor(Box::new(job)))
         .await;
 }
 
-pub fn dispatch_blocking(job: impl FnOnce(&mut Editor, &mut Compositor)->RequireRender + Send + 'static) {
+pub fn dispatch_blocking(job: impl FnOnce(&mut Editor, &mut Compositor) + Send + 'static) {
     let jobs = JOB_QUEUE.wait();
     send_blocking(jobs, Callback::EditorCompositor(Box::new(job)))
 }
@@ -113,16 +104,15 @@ impl Jobs {
         editor: &mut Editor,
         compositor: &mut Compositor,
         call: anyhow::Result<Option<Callback>>,
-    )-> RequireRender {
+    ) {
         match call {
-            Ok(None) => RequireRender::Skip,
+            Ok(None) => {}
             Ok(Some(call)) => match call {
                 Callback::EditorCompositor(call) => call(editor, compositor),
                 Callback::Editor(call) => call(editor),
             },
             Err(e) => {
                 editor.set_error(format!("Async job failed: {}", e));
-                RequireRender::Render
             }
         }
     }
@@ -160,12 +150,10 @@ impl Jobs {
                         #[allow(clippy::needless_option_as_deref)]
                         match callback {
                             Callback::EditorCompositor(call) if compositor.is_some() => {
-                                call(editor, compositor.as_deref_mut().unwrap());
-                                 }
-                            Callback::Editor(call) => {
-                                call(editor);
+                                call(editor, compositor.as_deref_mut().unwrap())
                             }
-                        
+                            Callback::Editor(call) => call(editor),
+
                             // skip callbacks for which we don't have the necessary references
                             _ => (),
                         }
