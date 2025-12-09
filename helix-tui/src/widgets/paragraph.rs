@@ -7,23 +7,18 @@ use crate::{
         Block, Widget,
     },
 };
-use fastdiv::FastDiv;
 
 use helix_core::unicode::width::UnicodeWidthStr;
 use helix_view::graphics::{Rect, Style};
 use std::iter;
 
 fn get_line_offset(line_width: u16, text_area_width: u16, alignment: Alignment) -> u16 {
-    const D: u32 = 2;
-    let m = D.precompute_div();
     match alignment {
-        Alignment::Center => (((text_area_width) as u32).fast_div(m))
-            .saturating_sub(((line_width) as u32).fast_div(m)) as u16,
+        Alignment::Center => (text_area_width / 2).saturating_sub(line_width / 2),
         Alignment::Right => text_area_width.saturating_sub(line_width),
         Alignment::Left => 0,
     }
 }
-
 /// A widget to display some text.
 ///
 /// # Examples

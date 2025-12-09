@@ -360,10 +360,6 @@ impl Completion {
             AtomKind::Fuzzy,
             false,
         );
-        const D: u32 = 2;
-        const DD: u32 = 3;
-        let m = D.precompute_div();
-        let mm = DD.precompute_div();
         let mut buf = Vec::new();
         let (matches, options) = self.popup.contents_mut().update_options();
         if incremental {
@@ -373,7 +369,7 @@ impl Completion {
                 let new_score = pattern.score(Utf32Str::new(text, &mut buf), &mut matcher);
                 match new_score {
                     Some(new_score) => {
-                        *score = (new_score as u32).fast_div(m);
+                        *score = new_score as u32 / 2;
                         true
                     }
                     None => false,
@@ -397,7 +393,7 @@ impl Completion {
         //
         // The score computation is a heuristic derived from Nucleo internal constants that may
         // move upstream in the future. I want to test this out here to settle on a good number.
-        let min_score = (7 + pattern.needle_text().len() as u32 * 14).fast_div(mm);
+        let min_score = (7 + pattern.needle_text().len() as u32 * 14) / 3;
         matches.sort_unstable_by_key(|&(i, score)| {
             let option = &options[i as usize];
             (
@@ -409,7 +405,6 @@ impl Completion {
             )
         });
     }
-
     /// Synchronously resolve the given completion item. This is used when
     /// accepting a completion.
     fn resolve_completion_item(

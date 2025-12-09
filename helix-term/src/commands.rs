@@ -1411,22 +1411,17 @@ fn goto_window(cx: &mut Context, align: Align) {
 
     let height = view.inner_height();
 
-    const DD: u64 = 2;
-
-    let mm = DD.precompute_div();
-
-
     // respect user given count if any
     // - 1 so we have at least one gap in the middle.
     // a height of 6 with padding of 3 on each side will keep shifting the view back and forth
     // as we type
-    let scrolloff = config.scrolloff.min((height.saturating_sub(1) as u64).fast_div(mm)as usize);
+    let scrolloff = config.scrolloff.min(height.saturating_sub(1) / 2);
 
     let last_visual_line = view.last_visual_line(doc);
 
     let visual_line = match align {
         Align::Top => view_offset.vertical_offset + scrolloff + count,
-        Align::Center => view_offset.vertical_offset + ((last_visual_line as u64).fast_div(mm)) as usize,
+        Align::Center => view_offset.vertical_offset + (last_visual_line / 2),
         Align::Bottom => {
             view_offset.vertical_offset + last_visual_line.saturating_sub(scrolloff + count)
         }
@@ -2107,16 +2102,13 @@ pub fn scroll(cx: &mut Context, offset: usize, direction: Direction, sync_cursor
     let (view, doc) = current!(cx.editor);
     let mut view_offset = doc.view_offset(view.id);
 
-    const D:u64 = 2;
-    let mm = D.precompute_div();
-
     let range = doc.selection(view.id).primary();
     let text = doc.text().slice(..);
 
     let cursor = range.cursor(text);
     let height = view.inner_height();
 
-    let scrolloff = config.scrolloff.min((height.saturating_sub(1) as u64).fast_div(mm) as usize);
+    let scrolloff = config.scrolloff.min(height.saturating_sub(1) / 2);
     let offset = match direction {
         Forward => offset as isize,
         Backward => -(offset as isize),
@@ -2214,6 +2206,7 @@ pub fn scroll(cx: &mut Context, offset: usize, direction: Direction, sync_cursor
     doc.set_selection(view.id, sel);
 }
 
+
 fn page_up(cx: &mut Context) {
     let view = view!(cx.editor);
     let offset = view.inner_height();
@@ -2227,21 +2220,16 @@ fn page_down(cx: &mut Context) {
 }
 
 fn half_page_up(cx: &mut Context) {
-    const D:u64 = 2;
-    let m = D.precompute_div();
     let view = view!(cx.editor);
-    let offset = ((view.inner_height()) as u64).fast_div(m) as usize;
+    let offset = view.inner_height() / 2;
     scroll(cx, offset, Direction::Backward, false);
 }
 
 fn half_page_down(cx: &mut Context) {
-    const D:u64 = 2;
-    let m = D.precompute_div();
     let view = view!(cx.editor);
-    let offset = ((view.inner_height()) as u64).fast_div(m) as usize;
+    let offset = view.inner_height() / 2;
     scroll(cx, offset, Direction::Forward, false);
 }
-
 fn page_cursor_up(cx: &mut Context) {
     let view = view!(cx.editor);
     let offset = view.inner_height();
@@ -2255,22 +2243,17 @@ fn page_cursor_down(cx: &mut Context) {
 }
 
 fn page_cursor_half_up(cx: &mut Context) {
-    const D:u64 = 2;
-    let m = D.precompute_div();
-    
     let view = view!(cx.editor);
-    let offset = ((view.inner_height()) as u64).fast_div(m) as usize;
+    let offset = view.inner_height() / 2;
     scroll(cx, offset, Direction::Backward, true);
 }
 
+
 fn page_cursor_half_down(cx: &mut Context) {
-    const D:u64 = 2;
-    let m = D.precompute_div();
     let view = view!(cx.editor);
-    let offset = ((view.inner_height())as u64).fast_div(m) as usize;
+    let offset = view.inner_height() / 2;
     scroll(cx, offset, Direction::Forward, true);
 }
-
 #[allow(deprecated)]
 // currently uses the deprecated `visual_coords_at_pos`/`pos_at_visual_coords` functions
 // as this function ignores softwrapping (and virtual text) and instead only cares
@@ -6323,8 +6306,6 @@ fn align_view_middle(cx: &mut Context) {
     if text_fmt.soft_wrap {
         return;
     }
-    const D:u64 = 2;
-    let m = D.precompute_div();
     let doc_text = doc.text().slice(..);
     let pos = doc.selection(view.id).primary().cursor(doc_text);
     let pos = visual_offset_from_block(
@@ -6339,9 +6320,10 @@ fn align_view_middle(cx: &mut Context) {
     let mut offset = doc.view_offset(view.id);
     offset.horizontal_offset = pos
         .col
-        .saturating_sub((view.inner_area(doc).width as u64).fast_div(m) as usize);
+        .saturating_sub((view.inner_area(doc).width as usize) / 2);
     doc.set_view_offset(view.id, offset);
 }
+
 
 fn scroll_up(cx: &mut Context) {
     scroll(cx, cx.count(), Direction::Backward, false);
