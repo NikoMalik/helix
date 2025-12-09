@@ -1638,6 +1638,7 @@ dependencies = [
  "clipboard-win",
  "crossterm",
  "fastdiv",
+ "filetime",
  "futures-util",
  "hashbrown 0.16.1",
  "helix-core",
