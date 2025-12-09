@@ -1,6 +1,7 @@
 ## Editor
 
 - [`[editor]` Section](#editor-section)
+- [`[editor.completion-item-kinds]` Section](#editorcompletion-item-kinds-section)
 - [`[editor.clipboard-provider]` Section](#editorclipboard-provider-section)
 - [`[editor.statusline]` Section](#editorstatusline-section)
 - [`[editor.lsp]` Section](#editorlsp-section)
@@ -68,6 +69,7 @@
 | `jump-label-alphabet` | The characters that are used to generate two character jump labels. Characters at the start of the alphabet are used first. | `"abcdefghijklmnopqrstuvwxyz"` |
 | `end-of-line-diagnostics` | Minimum severity of diagnostics to render at the end of the line. Set to `disable` to disable entirely. Refer to the setting about `inline-diagnostics` for more details | `"hint"` |
 | `clipboard-provider` | Which API to use for clipboard interaction. One of `pasteboard` (MacOS), `wayland`, `x-clip`, `x-sel`, `win32-yank`, `termux`, `tmux`, `windows`, `termcode`, `none`, or a custom command set. | Platform and environment specific. |
+| `completion-item-kinds` | Text or symbol to display for the completion menu item kind. By default, Helix displays the kind in `kebab-case` | `{}` (empty) |
 | `editor-config` | Whether to read settings from [EditorConfig](https://editorconfig.org) files | `true` |
 | `welcome-screen` | Whether to enable the welcome screen | `true` |
 | `rainbow-brackets` | Whether to render rainbow colors for matching brackets. Requires tree-sitter `rainbows.scm` queries for the language. | `false` |
@@ -568,5 +570,95 @@ Change the `format` string to customize the blame message displayed. Variables a
 - `body`: The body of the commit
 - `commit`: The short hex SHA1 hash of the commit
 - `email`: The email of the author of the commit
+
+
+
+
+
+
+
+### `[editor.completion-item-kinds]` Section
+
+These are used to override completion item kinds text. The same text that displays 
+what kind of completion is inside the completion menu.
+
+<details>
+<summary>Here are the completion item kinds for the <b>LSP</b> completion menu:</summary>
+- `text`
+- `method`
+- `function`
+- `constructor`
+- `field`
+- `variable`
+- `class`
+- `interface`
+- `module`
+- `property`
+- `unit`
+- `value`
+- `enum`
+- `keyword`
+- `snippet`
+- `color`
+- `file`
+- `reference`
+- `folder`
+- `enum-member`
+- `constant`
+- `struct`
+- `event`
+- `operator`
+- `type-parameter`
+</details>
+
+<details>
+<summary>Here are the completion item kinds for the <b>path</b> completion menu:</summary>
+- `file`
+- `folder`
+- `link`
+</details>
+
+<br>
+
+By default, these values are used as text within the completion menu.
+However, you can replace them with custom text or symbols as shown in the following example:
+
+
+<details>
+
+<summary>Example configuration with <a href="https://nerdfonts.com">Nerd Fonts</a> </summary>
+
+```toml
+[editor.completion-item-kinds]
+text = ""
+method = "󰆧"
+function = "󰊕"
+constructor = ""
+field = "󰇽"
+variable = "󰂡"
+class = "󰠱"
+interface = ""
+module = ""
+property = "󰜢"
+unit = ""
+value = "󰎠"
+enum = ""
+keyword = "󰌋"
+snippet = ""
+color = "󰏘"
+file = "󰈙"
+reference = ""
+folder = "󰉋"
+link = "󱧮"
+enum-member = ""
+constant = "󰏿"
+struct = ""
+event = ""
+operator = "󰆕"
+type-parameter = "󰅲"
+
+```
+
+</details>
 
 

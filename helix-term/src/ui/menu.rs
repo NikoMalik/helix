@@ -188,6 +188,10 @@ impl<T: Item> Menu<T> {
         self.matches.is_empty()
     }
 
+    pub fn set_editor_data(&mut self, editor_data: T::Data) {
+        self.editor_data = editor_data;
+    }
+
     pub fn len(&self) -> usize {
         self.matches.len()
     }
