@@ -9,12 +9,12 @@ use std::{
     time::Duration,
 };
 
-use hashbrown::HashMap;
+use hashbrown::{HashMap, HashSet};
 
 use anyhow::{Context, Result};
 use arc_swap::{ArcSwap, Guard};
 use config::{Configuration, FileType, LanguageConfiguration, LanguageServerConfiguration};
-use foldhash::HashSet;
+
 use helix_loader::grammar::get_language;
 use helix_stdx::rope::RopeSliceExt as _;
 use once_cell::sync::OnceCell;
@@ -703,6 +703,7 @@ impl Syntax {
 
 pub type Highlighter<'a> = highlighter::Highlighter<'a, 'a, Loader>;
 
+#[inline(always)]
 fn generate_edits(old_text: RopeSlice, changeset: &ChangeSet) -> Vec<InputEdit> {
     use crate::Operation::*;
     use tree_sitter::Point;

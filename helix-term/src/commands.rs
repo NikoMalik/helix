@@ -2,7 +2,6 @@ pub(crate) mod dap;
 pub(crate) mod lsp;
 pub(crate) mod syntax;
 pub(crate) mod typed;
-use fastdiv::FastDiv;
 pub use dap::*;
 use futures_util::FutureExt;
 use helix_event::status;
@@ -69,6 +68,7 @@ use crate::{
     filter_picker_entry,
     job::Callback,
     ui::{self, overlay::overlaid, Picker, PickerColumn, Popup, Prompt, PromptEvent},
+
 };
 
 use crate::job::{self, Jobs};
