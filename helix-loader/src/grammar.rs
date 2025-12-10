@@ -550,6 +550,7 @@ fn build_tree_sitter_library(
         command
             .arg("-shared")
             .arg("-fno-exceptions")
+            .arg("-flto")
             .arg("-I")
             .arg(header_path)
             .arg("-o")
@@ -572,6 +573,7 @@ fn build_tree_sitter_library(
                 cpp_command.arg("-fPIC");
 
                 cpp_command
+                    .arg("-flto")
                     .arg("-fno-exceptions")
                     .arg("-I")
                     .arg(header_path)
