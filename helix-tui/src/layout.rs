@@ -1,7 +1,7 @@
 //! Layout engine for terminal
 
 use hashbrown::HashMap;
-use std::cell::RefCell;
+use std::cell::UnsafeCell;
 
 use cassowary::strength::{REQUIRED, WEAK};
 use cassowary::WeightedRelation::*;
@@ -68,7 +68,7 @@ pub struct Layout {
 }
 
 thread_local! {
-    static LAYOUT_CACHE: RefCell<HashMap<(Rect, Layout), Vec<Rect>>> = RefCell::new(HashMap::new());
+    static LAYOUT_CACHE: UnsafeCell<HashMap<(Rect, Layout), Vec<Rect>>> = UnsafeCell::new(HashMap::with_capacity(1024));
 }
 
 impl Default for Layout {
@@ -177,10 +177,9 @@ impl Layout {
     /// );
     /// ```
     pub fn split(&self, area: Rect) -> Vec<Rect> {
-        // TODO: Maybe use a fixed size cache ?
         LAYOUT_CACHE.with(|c| {
-            c.borrow_mut()
-                .entry((area, self.clone()))
+            let map = unsafe { &mut *c.get() };
+            map.entry((area, self.clone()))
                 .or_insert_with(|| split(area, self))
                 .clone()
         })
