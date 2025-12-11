@@ -160,90 +160,89 @@ pub fn textobject_word(
         TextObject::Movement => unreachable!(),
     }
 }
+
 pub fn textobject_paragraph(
     slice: RopeSlice,
     range: Range,
     textobject: TextObject,
     count: usize,
 ) -> Range {
+    #[inline(always)]
+    fn is_empty(slice: &RopeSlice, line: usize) -> bool {
+        rope_is_line_ending(slice.line(line))
+    }
     let mut line = range.cursor_line(slice);
-    let prev_line_empty = rope_is_line_ending(slice.line(line.saturating_sub(1)));
-    let curr_line_empty = rope_is_line_ending(slice.line(line));
-    let next_line_empty = rope_is_line_ending(slice.line(line.saturating_sub(1)));
+    let total_lines = slice.len_lines();
+
+    let prev_empty = if line > 0 {
+        is_empty(&slice, line - 1)
+    } else {
+        true
+    };
+    let curr_empty = is_empty(&slice, line);
+    let next_empty = if line + 1 < total_lines {
+        is_empty(&slice, line + 1)
+    } else {
+        true
+    };
     let last_char =
         prev_grapheme_boundary(slice, slice.line_to_char(line + 1)) == range.cursor(slice);
-    let prev_empty_to_line = prev_line_empty && !curr_line_empty;
-    let curr_empty_to_line = curr_line_empty && !next_line_empty;
 
-    // skip character before paragraph boundary
-    let mut line_back = line; // line but backwards
-    if prev_empty_to_line || curr_empty_to_line {
+    let prev_to_line = prev_empty && !curr_empty;
+    let curr_to_line = curr_empty && !next_empty;
+
+    let mut line_back = line;
+
+    if prev_to_line || curr_to_line {
         line_back += 1;
     }
-    // do not include current paragraph on paragraph end (include next)
-    if !(curr_empty_to_line && last_char) {
-        let mut lines = slice.lines_at(line_back);
-        lines.reverse();
-        let mut lines = lines.map(rope_is_line_ending).peekable();
-        while lines.next_if(|&e| e).is_some() {
+
+    if !(curr_to_line && last_char) {
+        while line_back > 0 && is_empty(&slice, line_back - 1) {
             line_back -= 1;
         }
-        while lines.next_if(|&e| !e).is_some() {
+        while line_back > 0 && !is_empty(&slice, line_back - 1) {
             line_back -= 1;
         }
     }
 
-    // skip character after paragraph boundary
-    if curr_empty_to_line && last_char {
+    if curr_to_line && last_char {
         line += 1;
     }
-    let mut lines = slice.lines_at(line).map(rope_is_line_ending).peekable();
-    let mut count_done = 0; // count how many non-whitespace paragraphs done
+
+    let mut count_done = 0;
     for _ in 0..count {
-        let mut done = false;
-        while lines.next_if(|&e| !e).is_some() {
+        let mut did_something = false;
+
+        while line < total_lines && !is_empty(&slice, line) {
             line += 1;
-            done = true;
+            did_something = true;
         }
-        while lines.next_if(|&e| e).is_some() {
+        while line < total_lines && is_empty(&slice, line) {
             line += 1;
         }
-        count_done += done as usize;
+
+        if did_something {
+            count_done += 1;
+        }
     }
 
-    // search one paragraph backwards for last paragraph
-    // makes `map` at the end of the paragraph with trailing newlines useful
-    let last_paragraph = count_done != count && lines.peek().is_none();
-    if last_paragraph {
-        let mut lines = slice.lines_at(line_back);
-        lines.reverse();
-        let mut lines = lines.map(rope_is_line_ending).peekable();
-        while lines.next_if(|&e| e).is_some() {
+    if count_done != count && line >= total_lines {
+        while line_back > 0 && is_empty(&slice, line_back - 1) {
             line_back -= 1;
         }
-        while lines.next_if(|&e| !e).is_some() {
+        while line_back > 0 && !is_empty(&slice, line_back - 1) {
             line_back -= 1;
         }
     }
 
-    // handle last whitespaces part separately depending on textobject
-    match textobject {
-        TextObject::Around => {}
-        TextObject::Inside => {
-            // remove last whitespace paragraph
-            let mut lines = slice.lines_at(line);
-            lines.reverse();
-            let mut lines = lines.map(rope_is_line_ending).peekable();
-            while lines.next_if(|&e| e).is_some() {
-                line -= 1;
-            }
+    if let TextObject::Inside = textobject {
+        while line > 0 && is_empty(&slice, line - 1) {
+            line -= 1;
         }
-        TextObject::Movement => unreachable!(),
     }
 
-    let anchor = slice.line_to_char(line_back);
-    let head = slice.line_to_char(line);
-    Range::new(anchor, head)
+    Range::new(slice.line_to_char(line_back), slice.line_to_char(line))
 }
 
 pub fn textobject_pair_surround(
