@@ -10,17 +10,11 @@ use crate::syntax;
 use crate::Range;
 use crate::{surround, Syntax};
 
+#[inline(always)]
 fn find_word_boundary(slice: RopeSlice, mut pos: usize, direction: Direction, long: bool) -> usize {
     use CharCategory::{Eol, Whitespace};
 
-    let iter = match direction {
-        Direction::Forward => slice.chars_at(pos),
-        Direction::Backward => {
-            let mut iter = slice.chars_at(pos);
-            iter.reverse();
-            iter
-        }
-    };
+    let len = slice.len_chars();
 
     let mut prev_category = match direction {
         Direction::Forward if pos == 0 => Whitespace,
@@ -29,19 +23,42 @@ fn find_word_boundary(slice: RopeSlice, mut pos: usize, direction: Direction, lo
         Direction::Backward => categorize_char(slice.char(pos)),
     };
 
-    for ch in iter {
-        match categorize_char(ch) {
-            Eol | Whitespace => return pos,
-            category => {
-                if !long && category != prev_category && pos != 0 && pos != slice.len_chars() {
-                    return pos;
-                } else {
-                    match direction {
-                        Direction::Forward => pos += 1,
-                        Direction::Backward => pos = pos.saturating_sub(1),
-                    }
-                    prev_category = category;
+    loop {
+        let ch = match direction {
+            Direction::Forward => slice.get_char(pos),
+            Direction::Backward => slice.get_char(pos),
+        };
+
+        let ch = match ch {
+            Some(c) => c,
+            None => break,
+        };
+
+        let category = categorize_char(ch);
+
+        match category {
+            Eol | Whitespace => break,
+            _ => {
+                if !long && category != prev_category && pos != 0 && pos != len {
+                    break;
                 }
+            }
+        }
+
+        prev_category = category;
+
+        match direction {
+            Direction::Forward => {
+                pos += 1;
+                if pos > len {
+                    break;
+                }
+            }
+            Direction::Backward => {
+                if pos == 0 {
+                    break;
+                }
+                pos -= 1;
             }
         }
     }
@@ -76,14 +93,49 @@ pub fn textobject_word(
     long: bool,
 ) -> Range {
     let pos = range.cursor(slice);
+    let len = slice.len_chars();
 
-    let word_start = find_word_boundary(slice, pos, Direction::Backward, long);
-    let word_end = match slice.get_char(pos).map(categorize_char) {
-        None | Some(CharCategory::Whitespace | CharCategory::Eol) => pos,
-        _ => find_word_boundary(slice, pos + 1, Direction::Forward, long),
+    let mut word_start = pos;
+    let mut prev_category = if pos == 0 {
+        CharCategory::Whitespace
+    } else {
+        categorize_char(slice.char(pos - 1))
     };
 
-    // Special case.
+    while word_start > 0 {
+        let ch = slice.char(word_start - 1);
+        let category = categorize_char(ch);
+        if category == CharCategory::Whitespace || category == CharCategory::Eol {
+            break;
+        }
+        if !long && category != prev_category {
+            break;
+        }
+        prev_category = category;
+        word_start -= 1;
+    }
+
+    let mut word_end = pos;
+    let ch_opt = slice.get_char(pos);
+    if let Some(ch) = ch_opt {
+        let category = categorize_char(ch);
+        if category != CharCategory::Whitespace && category != CharCategory::Eol {
+            let mut prev_category = category;
+            while word_end < len {
+                let ch = slice.char(word_end);
+                let category = categorize_char(ch);
+                if category == CharCategory::Whitespace || category == CharCategory::Eol {
+                    break;
+                }
+                if !long && category != prev_category {
+                    break;
+                }
+                prev_category = category;
+                word_end += 1;
+            }
+        }
+    }
+
     if word_start == word_end {
         return Range::new(word_start, word_end);
     }
@@ -91,26 +143,23 @@ pub fn textobject_word(
     match textobject {
         TextObject::Inside => Range::new(word_start, word_end),
         TextObject::Around => {
-            let whitespace_count_right = slice
-                .chars_at(word_end)
-                .take_while(|c| char_is_whitespace(*c))
-                .count();
-
-            if whitespace_count_right > 0 {
-                Range::new(word_start, word_end + whitespace_count_right)
-            } else {
-                let whitespace_count_left = {
-                    let mut iter = slice.chars_at(word_start);
-                    iter.reverse();
-                    iter.take_while(|c| char_is_whitespace(*c)).count()
-                };
-                Range::new(word_start - whitespace_count_left, word_end)
+            let mut right = word_end;
+            while right < len && char_is_whitespace(slice.char(right)) {
+                right += 1;
             }
+            if right != word_end {
+                return Range::new(word_start, right);
+            }
+
+            let mut left = word_start;
+            while left > 0 && char_is_whitespace(slice.char(left - 1)) {
+                left -= 1;
+            }
+            Range::new(left, word_end)
         }
         TextObject::Movement => unreachable!(),
     }
 }
-
 pub fn textobject_paragraph(
     slice: RopeSlice,
     range: Range,
