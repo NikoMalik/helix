@@ -9,6 +9,7 @@ use std::{
 };
 use tui::text::{Span, Spans, ToSpan};
 use tui::widgets::Cell;
+use crate::job::RequireRender;
 
 use helix_stdx::path;
 
@@ -77,6 +78,7 @@ pub fn file_explorer(root: PathBuf, editor: &Editor) -> Result<FileExplorer, std
                             if let Ok(picker) = file_explorer(new_root, editor) {
                                 compositor.push(Box::new(overlay::overlaid(picker)));
                             }
+                            RequireRender::Render
                         }));
                     Ok(call)
                 });

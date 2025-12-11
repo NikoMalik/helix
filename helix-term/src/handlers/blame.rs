@@ -32,31 +32,34 @@ impl helix_event::AsyncHook for BlameHandler {
         Some(Instant::now() + Duration::from_millis(50))
     }
 
-    fn finish_debounce(&mut self) {
-        let doc_id = self.doc_id;
-        let line_blame = self.show_blame_for_line_in_statusline;
-        let result = mem::take(&mut self.file_blame);
-        if let Some(result) = result {
-            tokio::spawn(async move {
-                job::dispatch(move |editor, _| {
-                    let Some(doc) = editor.document_mut(doc_id) else {
-                        return;
-                    };
-                    doc.file_blame = Some(result);
-                    if !editor.config().inline_blame.auto_fetch {
-                        if let Some(line) = line_blame {
-                            crate::commands::blame_line_impl(editor, doc_id, line);
-                        } else {
-                            editor.set_status("Blame for this file is now available")
-                        }
+       fn finish_debounce(&mut self) {
+    let doc_id = self.doc_id;
+    let line_blame = self.show_blame_for_line_in_statusline;
+    let result = mem::take(&mut self.file_blame);
+    if let Some(result) = result {
+        tokio::spawn(async move {
+            job::dispatch(move |editor, _| {
+                let Some(doc) = editor.document_mut(doc_id) else {
+                    return job::RequireRender::Skip;
+                };
+                doc.file_blame = Some(result);
+                if !editor.config().inline_blame.auto_fetch {
+                    if let Some(line) = line_blame {
+                        crate::commands::blame_line_impl(editor, doc_id, line);
+                        job::RequireRender::Render
+                    } else {
+                        editor.set_status("Blame for this file is now available");
+                        job::RequireRender::Skip
                     }
-                })
-                .await;
-            });
-        }
+                } else {
+                    job::RequireRender::Skip
+                }
+            })
+            .await;
+        });
     }
 }
-
+}
 pub(super) fn register_hooks(handlers: &Handlers) {
     let tx = handlers.blame.clone();
     register_hook!(move |event: &mut DocumentDidOpen<'_>| {
