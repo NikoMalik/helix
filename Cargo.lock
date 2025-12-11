@@ -1410,6 +1410,7 @@ dependencies = [
  "smallvec",
  "smartstring",
  "textwrap",
+ "tokio",
  "toml",
  "tree-house",
  "unicode-general-category",

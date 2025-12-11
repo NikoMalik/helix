@@ -516,7 +516,7 @@ pub struct Syntax {
     inner: tree_house::Syntax,
 }
 
-const PARSE_TIMEOUT: Duration = Duration::from_millis(500); // half a second is pretty generous
+const PARSE_TIMEOUT: Duration = Duration::from_millis(50);
 
 impl Syntax {
     pub fn new(source: RopeSlice, language: Language, loader: &Loader) -> Result<Self, Error> {

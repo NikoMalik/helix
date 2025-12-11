@@ -1,6 +1,5 @@
-use std::{borrow::Cow, cmp::Reverse, iter};
-
 use ropey::iter::Chars;
+use std::{borrow::Cow, cmp::Reverse, iter};
 
 use crate::{
     char_idx_at_visual_offset,
