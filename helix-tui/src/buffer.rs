@@ -298,6 +298,7 @@ impl Buffer {
         self.set_stringn(x, y, string, usize::MAX, style);
     }
 
+    #[inline(always)]
     /// Print at most the first n characters of a string if enough space is available
     /// until the end of the line
     pub fn set_stringn<S>(
@@ -459,7 +460,7 @@ impl Buffer {
         }
         (x_offset as u16, y)
     }
-
+    #[inline]
     /// Print at most the first `width` characters of a string if enough space is available
     /// until the end of the line.
     pub fn set_string_truncated_at_end(
@@ -636,35 +637,31 @@ impl Buffer {
     }
 
     /// Merge an other buffer into this one
-    pub fn merge(&mut self, other: &Buffer) {
+    pub fn merge(&mut self, mut other: Buffer) {
         let area = self.area.union(other.area);
         let cell: Cell = Default::default();
         self.content.resize(area.area(), cell.clone());
 
-        // Move original content to the appropriate space
+        // Move original content
         let size = self.area.area();
         for i in (0..size).rev() {
             let (x, y) = self.pos_of(i);
-            // New index in content
             let k = ((y - area.y) * area.width + x - area.x) as usize;
             if i != k {
                 self.content[k] = self.content[i].clone();
-                self.content[i] = cell.clone();
             }
         }
 
-        // Push content of the other buffer into this one (may erase previous
-        // data)
+        // Move other buffer content
         let size = other.area.area();
         for i in 0..size {
             let (x, y) = other.pos_of(i);
-            // New index in content
             let k = ((y - area.y) * area.width + x - area.x) as usize;
-            self.content[k] = other.content[i].clone();
+            self.content[k] = std::mem::take(&mut other.content[i]);
         }
+
         self.area = area;
     }
-
     /// Builds a minimal sequence of coordinates and Cells necessary to update the UI from
     /// self to other.
     ///
@@ -959,7 +956,7 @@ mod tests {
             },
             Cell::default().set_symbol("2"),
         );
-        one.merge(&two);
+        one.merge(two);
         assert_eq!(one, Buffer::with_lines(vec!["11", "11", "22", "22"]));
     }
 
@@ -983,7 +980,7 @@ mod tests {
             },
             Cell::default().set_symbol("2"),
         );
-        one.merge(&two);
+        one.merge(two);
         assert_eq!(
             one,
             Buffer::with_lines(vec!["22  ", "22  ", "  11", "  11"])
@@ -1010,7 +1007,7 @@ mod tests {
             },
             Cell::default().set_symbol("2"),
         );
-        one.merge(&two);
+        one.merge(two);
         let mut merged = Buffer::with_lines(vec!["222 ", "222 ", "2221", "2221"]);
         merged.area = Rect {
             x: 1,
