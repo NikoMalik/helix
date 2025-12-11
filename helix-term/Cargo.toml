@@ -64,7 +64,7 @@ futures-util = { version = "0.3", features = ["std", "async-await"], default-fea
 arc-swap = { version = "1.7.1" }
 termini = "1"
 indexmap = "2.12"
-mimalloc = { version = "*", features = ["v3"] }
+mimalloc = { version = "*", features = ["v3","override","local_dynamic_tls"] }
 fastdiv = { version = "0.1.0"}
 
 
