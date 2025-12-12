@@ -38,8 +38,6 @@ arc-swap = "1"
 regex = "1"
 bitflags.workspace = true
 foldhash.workspace = true
-tokio = { version = "1", features = ["rt", "rt-multi-thread", "io-util", "io-std", "time", "process", "macros", "fs", "parking_lot"] }
-
 hashbrown="0.16"
 url = "2.5.4"
 
