@@ -62,7 +62,7 @@ globset = "=0.4.16"
 fastdiv = { version = "0.1.0"}
 
 [patch.crates-io]
-tree-house = { git = "https://github.com/NikoMalik/tree-house", branch = "master" }
+tree-house = { path = "crates/tree-house" }
 
 
 

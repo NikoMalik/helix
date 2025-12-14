@@ -1,0 +1,4 @@
+[submodule "crates/tree-house"]
+	path = crates/tree-house
+	url = https://github.com/NikoMalik/tree-house
+	branch = master
