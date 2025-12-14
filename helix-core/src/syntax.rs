@@ -76,9 +76,9 @@ impl LanguageData {
             return Ok(None);
         };
         let highlight_query_text = read_query(name, "highlights.scm");
-        // let injection_query_text = read_query(name, "injections.scm");
+        let injection_query_text = read_query(name, "injections.scm");
         let local_query_text = read_query(name, "locals.scm");
-        let injection_query_text = "";
+        // let injection_query_text = "";
         let config = SyntaxConfig::new(
             grammar,
             &highlight_query_text,
