@@ -62,7 +62,9 @@ globset = "=0.4.16"
 fastdiv = { version = "0.1.0"}
 
 [patch.crates-io]
-tree-house = { path = "crates/tree-house" }
+tree-house = { path = "crates/tree-house/highlighter" }
+tree-house-bindings = { path = "crates/tree-house/bindings" }
+
 
 
 
