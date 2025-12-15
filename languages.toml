@@ -310,7 +310,6 @@ block-comment-tokens = [
 language-servers = [ "rust-analyzer" ]
 indent = { tab-width = 4, unit = "    " }
 persistent-diagnostic-sources = ["rustc", "clippy"]
-rulers = [99]
 
 [language.auto-pairs]
 '(' = ')'
