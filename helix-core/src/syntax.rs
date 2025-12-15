@@ -709,77 +709,82 @@ fn generate_edits(old_text: RopeSlice, changeset: &ChangeSet) -> Vec<InputEdit> 
     use crate::Operation::*;
     use tree_sitter::Point;
 
-    let mut old_pos = 0;
-
-    let mut edits = Vec::new();
-
     if changeset.changes.is_empty() {
-        return edits;
+        return Vec::new();
     }
 
-    let mut iter = changeset.changes.iter().peekable();
+    let mut edits = Vec::with_capacity(changeset.changes.len());
 
-    // TODO; this is a lot easier with Change instead of Operation.
-    while let Some(change) = iter.next() {
-        let len = match change {
-            Delete(i) | Retain(i) => *i,
-            Insert(_) => 0,
-        };
-        let mut old_end = old_pos + len;
+    let mut char_pos = 0usize;
+    let mut byte_pos = old_text.char_to_byte(0) as u32;
 
-        match change {
-            Retain(_) => {}
-            Delete(_) => {
-                let start_byte = old_text.char_to_byte(old_pos) as u32;
-                let old_end_byte = old_text.char_to_byte(old_end) as u32;
+    let mut i = 0;
+    let changes = &changeset.changes;
 
-                // deletion
+    while i < changes.len() {
+        match &changes[i] {
+            Retain(len) => {
+                char_pos += *len;
+                byte_pos = old_text.char_to_byte(char_pos) as u32;
+                i += 1;
+            }
+
+            Delete(len) => {
+                let start_byte = byte_pos;
+                char_pos += *len;
+                let old_end_byte = old_text.char_to_byte(char_pos) as u32;
+
                 edits.push(InputEdit {
-                    start_byte,               // old_pos to byte
-                    old_end_byte,             // old_end to byte
-                    new_end_byte: start_byte, // old_pos to byte
+                    start_byte,
+                    old_end_byte,
+                    new_end_byte: start_byte,
                     start_point: Point::ZERO,
                     old_end_point: Point::ZERO,
                     new_end_point: Point::ZERO,
                 });
+
+                byte_pos = old_end_byte;
+                i += 1;
             }
+
             Insert(s) => {
-                let start_byte = old_text.char_to_byte(old_pos) as u32;
+                let start_byte = byte_pos;
 
-                // a subsequent delete means a replace, consume it
-                if let Some(Delete(len)) = iter.peek() {
-                    old_end = old_pos + len;
-                    let old_end_byte = old_text.char_to_byte(old_end) as u32;
+                if i + 1 < changes.len() {
+                    if let Delete(len) = changes[i + 1] {
+                        char_pos += len;
+                        let old_end_byte = old_text.char_to_byte(char_pos) as u32;
 
-                    iter.next();
+                        edits.push(InputEdit {
+                            start_byte,
+                            old_end_byte,
+                            new_end_byte: start_byte + s.len() as u32,
+                            start_point: Point::ZERO,
+                            old_end_point: Point::ZERO,
+                            new_end_point: Point::ZERO,
+                        });
 
-                    // replacement
-                    edits.push(InputEdit {
-                        start_byte,                                // old_pos to byte
-                        old_end_byte,                              // old_end to byte
-                        new_end_byte: start_byte + s.len() as u32, // old_pos to byte + s.len()
-                        start_point: Point::ZERO,
-                        old_end_point: Point::ZERO,
-                        new_end_point: Point::ZERO,
-                    });
-                } else {
-                    // insert
-                    edits.push(InputEdit {
-                        start_byte,                                // old_pos to byte
-                        old_end_byte: start_byte,                  // same
-                        new_end_byte: start_byte + s.len() as u32, // old_pos + s.len()
-                        start_point: Point::ZERO,
-                        old_end_point: Point::ZERO,
-                        new_end_point: Point::ZERO,
-                    });
+                        byte_pos = old_end_byte;
+                        i += 2;
+                        continue;
+                    }
                 }
+                edits.push(InputEdit {
+                    start_byte,
+                    old_end_byte: start_byte,
+                    new_end_byte: start_byte + s.len() as u32,
+                    start_point: Point::ZERO,
+                    old_end_point: Point::ZERO,
+                    new_end_point: Point::ZERO,
+                });
+
+                i += 1;
             }
         }
-        old_pos = old_end;
     }
+
     edits
 }
-
 /// A set of "overlay" highlights and ranges they apply to.
 ///
 /// As overlays, the styles for the given `Highlight`s are merged on top of the syntax highlights.
