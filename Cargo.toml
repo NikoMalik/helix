@@ -60,6 +60,8 @@ sonic-rs = "0.5"
 # MSRV: update once the MSRV is >=1.85
 globset = "=0.4.16"
 fastdiv = { version = "0.1.0"}
+mimalloc = { version = "*", features = ["v3","override","local_dynamic_tls"] }
+
 
 [patch.crates-io]
 tree-house = { path = "crates/tree-house/highlighter" }
